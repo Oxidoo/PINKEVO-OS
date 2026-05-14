@@ -1,18 +1,23 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  Sparkles,
+  Bot,
   Briefcase,
   CalendarDays,
-  Globe,
-  Bot,
-  Workflow,
   FileText,
-  Wallet,
+  Globe,
+  LayoutDashboard,
   Settings,
+  Sparkles,
+  Users,
+  Wallet,
+  Workflow,
 } from "lucide-react";
+import { getUser } from "@/lib/auth/server";
+import { requireUser } from "@/lib/auth/server";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { LocaleToggle } from "@/components/shared/locale-toggle";
+import { UserMenu } from "@/components/shared/user-menu";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -28,7 +33,10 @@ const navItems = [
   { href: "/settings", label: "Paramètres", icon: Settings },
 ] as const;
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default async function DashboardLayout({ children }: { children: ReactNode }) {
+  const profile = await requireUser();
+  const user = await getUser();
+
   return (
     <div className="flex min-h-screen flex-1 bg-muted/30">
       <aside className="hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
@@ -48,13 +56,21 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="border-t p-3 text-xs text-muted-foreground">v0.1 · scaffolding</div>
+        <div className="border-t p-3 text-xs text-muted-foreground">v0.1 · phase 1</div>
       </aside>
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b bg-background px-6">
           <h1 className="text-sm font-medium text-muted-foreground">Cockpit agence</h1>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="hidden sm:inline">Bienvenue</span>
+          <div className="flex items-center gap-1">
+            <LocaleToggle />
+            <ThemeToggle />
+            <div className="mx-1 h-6 w-px bg-border" />
+            <UserMenu
+              name={profile.fullName}
+              email={user?.email ?? ""}
+              avatarUrl={profile.avatarUrl}
+              role={profile.role}
+            />
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-6 p-6">{children}</main>

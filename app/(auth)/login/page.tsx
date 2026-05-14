@@ -1,47 +1,38 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoginForm } from "./login-form";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ signedUp?: string; error?: string }>;
+}) {
+  const params = await searchParams;
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Se connecter</CardTitle>
-          <CardDescription>
-            Connectez-vous à votre cockpit PINKEVO. Auth Supabase arrive en Phase 1.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button className="w-full" variant="outline" disabled>
-            Continuer avec Google
-          </Button>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            ou
-            <span className="h-px flex-1 bg-border" />
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl">Bon retour</CardTitle>
+        <CardDescription>Connectez-vous à votre cockpit PINKEVO.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {params.signedUp && (
+          <div className="rounded-md bg-success/10 px-3 py-2 text-sm text-success" role="status">
+            Compte créé. Vérifiez votre email pour confirmer puis connectez-vous.
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="vous@pinkevo.com" disabled />
+        )}
+        {params.error && (
+          <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+            {params.error}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
-            <Input id="password" type="password" disabled />
-          </div>
-          <Button className="w-full" disabled>
-            Se connecter
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            Pas de compte ?{" "}
-            <Link href="/signup" className="font-medium text-brand-600 hover:underline">
-              Demander un accès
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        )}
+        <LoginForm />
+        <p className="text-center text-xs text-muted-foreground">
+          Pas encore de compte ?{" "}
+          <Link href="/signup" className="font-medium text-brand-600 hover:underline">
+            Demander un accès
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }

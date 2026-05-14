@@ -1,8 +1,8 @@
-/**
- * Drizzle schema entry point.
- *
- * Tables are split per-domain in sibling files and re-exported here. The full
- * schema (auth/profiles, CRM, projects, agents, finance, etc.) lands in Phase 1.
- */
-
-export {};
+export * from "./enums";
+export * from "./auth";
+export * from "./crm";
+export * from "./projects";
+export * from "./agents";
+export * from "./communications";
+export * from "./finance";
+export * from "./system";
