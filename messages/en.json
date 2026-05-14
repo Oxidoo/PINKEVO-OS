@@ -1,0 +1,39 @@
+{
+  "common": {
+    "appName": "PINKEVO OS",
+    "tagline": "The central cockpit for the agency.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading…",
+    "search": "Search",
+    "comingSoon": "Coming soon"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "clients": "Clients",
+    "leads": "Leads",
+    "deals": "Deals",
+    "calendar": "Calendar",
+    "websites": "Websites",
+    "agents": "AI agents",
+    "automations": "Automations",
+    "documents": "Documents",
+    "finance": "Finance",
+    "settings": "Settings"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "email": "Email",
+    "password": "Password",
+    "continueWithGoogle": "Continue with Google"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "mrr": "MRR",
+    "activeClients": "Active clients",
+    "hotLeads": "Hot leads",
+    "monthMargin": "Month margin"
+  }
+}
