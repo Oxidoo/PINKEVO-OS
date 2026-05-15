@@ -14,6 +14,6 @@ export const config = {
      * - favicon.ico, robots.txt, sitemap.xml
      * - api/inngest, api/stripe/webhook, api/telegram/webhook, api/cal/webhook (public webhooks)
      */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/inngest|api/stripe/webhook|api/telegram/webhook|api/cal/webhook).*)",
+    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|api/inngest|api/stripe/webhook|api/telegram/webhook|api/cal/webhook|api/resend/webhook).*)",
   ],
 };

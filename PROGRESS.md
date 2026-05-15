@@ -132,9 +132,48 @@ Suivi des phases de build.
 - Score IA auto à la création de lead : **Phase 4** (agent `lead_qualifier`).
 - Édition/suppression de lead et deal depuis l'UI : CRUD de base présent, édition inline à enrichir en Phase 11 (polish).
 
+## Phase 3 — Email & Communication ✅
+
+### Templates React Email (`lib/email/templates/`)
+- [x] `base.tsx` : layout commun (header brand rose, footer, styles boutons/paragraphes)
+- [x] `invitation.tsx` : invitation équipe (inviter, rôle, CTA)
+- [x] `welcome.tsx` : bienvenue client
+- [x] `follow-up.tsx` : relance générique (utilisée par les campagnes)
+- [x] `proposal.tsx` : envoi de proposition (lien signature)
+- [x] `invoice.tsx` : facture (lien paiement)
+- [x] Preview via `pnpm email:dev` (script déjà câblé Phase 0)
+
+### Resend (`lib/integrations/resend/`)
+- [x] `client.ts` : `sendEmail()` — render React Email → HTML + texte, envoi Resend, **log systématique dans `email_messages`**
+- [x] Fallback sans `RESEND_API_KEY` : email rendu + loggé en statut `queued` (flow testable sans clé, `skipped: true`)
+- [x] `FROM_EMAIL` configurable via env, défaut `onboarding@resend.dev`
+
+### Webhook
+- [x] `/api/resend/webhook` : traite `delivered` / `opened` / `clicked` / `bounced` / `complained`, met à jour `email_messages` par `resend_id`
+- [x] Ajouté à la liste de bypass du middleware auth
+
+### Campagnes (`lib/email/campaigns.ts` + `/campaigns`)
+- [x] `createCampaign` (nom, objet, message, programmation optionnelle → statut `scheduled`/`draft`)
+- [x] `sendCampaign` : envoie à tous les leads ayant un email, met à jour `sentCount` + statut
+- [x] Page `/campaigns` : 2 tabs (Campagnes avec bouton Envoyer / Journal des messages avec statut + ouvertures)
+- [x] Entrée de nav « Communication » ajoutée à la sidebar
+
+### Branchements
+- [x] **Email d'invitation Phase 1 câblé** : `inviteTeammate` envoie désormais le template `InvitationEmail` via Resend (TODO de la Phase 1 résolu)
+
+### Décisions techniques
+- **Log avant tout** : `sendEmail` insère toujours dans `email_messages` même sans clé API ou en cas d'échec (statut `failed`) — traçabilité complète, base pour les analytics campagnes.
+- **Audience V1 simple** : les campagnes ciblent tous les leads avec email. Le ciblage avancé (`audienceFilter` jsonb) est stocké mais l'UI de segmentation arrive en Phase 11.
+- **Vérif signature Svix** : le webhook Resend matche par `email_id` sans vérif crypto pour l'instant — durcissement (Svix signature) prévu Phase 11.
+- **Imports dynamiques dans `inviteTeammate`** : `sendEmail`/templates importés en `await import()` pour éviter de charger `server-only` + Resend dans tous les chemins de `profile-actions`.
+
+### Points laissés pour plus tard
+- Envoi programmé réel (cron) : statut `scheduled` stocké, l'exécution via Inngest cron arrive avec la Phase 9 (automatisations).
+- Tab « Templates emails » + « Webhooks reçus (debug) » dans Settings : Phase 11 (polish).
+- Tracking `openCount`/`clickCount` agrégé au niveau campagne : calculé à la volée pour l'instant, agrégation incrémentale via webhook en Phase 11.
+
 ## Phases suivantes
 
-- Phase 3 : Email & Communication
 - Phase 4 : Agents IA
 - Phase 5 : Calendrier
 - Phase 6 : Finance

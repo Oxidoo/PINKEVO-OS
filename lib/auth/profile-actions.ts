@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { profiles, teamInvitations } from "@/lib/db/schema";
+import { env } from "@/lib/env";
 import { ROLES, type Role } from "./rbac";
 import { requireRole, requireUser } from "./server";
 
@@ -67,7 +68,19 @@ export async function inviteTeammate(_prev: SimpleState, formData: FormData): Pr
     expiresAt,
   });
 
-  // TODO Phase 3: send invitation email via Resend.
+  const { sendEmail } = await import("@/lib/integrations/resend/client");
+  const { InvitationEmail } = await import("@/lib/email/templates/invitation");
+  const { ROLE_LABELS_FR } = await import("./rbac");
+  await sendEmail({
+    to: parsed.data.email,
+    subject: "Vous êtes invité·e à rejoindre PINKEVO OS",
+    react: InvitationEmail({
+      inviterName: inviter.fullName ?? "Un membre de l'équipe",
+      role: ROLE_LABELS_FR[parsed.data.role],
+      acceptUrl: `${env.NEXT_PUBLIC_APP_URL}/signup`,
+    }),
+  });
+
   revalidatePath("/settings");
   return { ok: true };
 }
