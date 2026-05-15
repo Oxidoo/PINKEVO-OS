@@ -214,9 +214,45 @@ Suivi des phases de build.
 - Streaming temps réel du résultat (toast de progression live) : actuellement le run est synchrone côté action, le résultat apparaît au refresh/revalidate. Streaming SSE en Phase 11.
 - GSC (Search Console) dans `seo_auditor` : OAuth GSC arrive en Phase 7, l'agent utilise PSI seul pour l'instant.
 
+## Phase 5 — Calendrier ✅
+
+### Sécurité / crypto
+- [x] `lib/crypto.ts` : AES-256-GCM `encryptSecret`/`decryptSecret` via `ENCRYPTION_KEY` (iv+tag+ciphertext base64) — utilisé pour stocker les tokens OAuth
+
+### Google Calendar (OAuth par user)
+- [x] `lib/integrations/google/oauth.ts` : build auth URL, exchange code, refresh token (scopes calendar.events.readonly + webmasters.readonly pour Phase 7)
+- [x] `lib/integrations/google/calendar.ts` : `fetchGoogleEvents` avec refresh auto du token expiré, `isGoogleConnected`
+- [x] `/api/google/connect` (redirige vers consent, state = user id) + `/api/google/callback` (stocke tokens chiffrés dans `integrations`)
+- [x] Bouton « Connecter via OAuth » câblé dans Settings → Intégrations (carte Google)
+
+### Cal.com
+- [x] `/api/cal/webhook` : vérif signature HMAC-SHA256 (`x-cal-signature-256`), gère BOOKING_CREATED/CANCELLED, upsert `calendar_events`
+
+### Matching auto
+- [x] `lib/calendar/match.ts` : `matchEntityByEmail` → lead, sinon contact→client, sinon client par nom
+
+### Data layer & UI
+- [x] `lib/calendar/actions.ts` : `getCalendarEvents(range)`, `syncGoogleCalendar` (pull + upsert + matching), `googleConnectionStatus`
+- [x] `/calendar` : grille mensuelle (jours cliquables, events du jour) + colonne « À venir », badges provider + lead/client lié + bouton Sync/Connect
+
+### Préparation IA avant RDV
+- [x] `lib/integrations/telegram/client.ts` : `sendTelegramMessage` (no-op gracieux sans token)
+- [x] `lib/calendar/prep.ts` : `runMeetingPrep` — trouve les RDV à ~30 min, compose un récap (contexte lead/client), push Telegram aux membres ayant un `telegram_chat_id`, marque l'event pour éviter le doublon
+- [x] Fonction Inngest cron `meeting-prep` (`*/5 * * * *`)
+
+### Décisions techniques
+- **Tokens OAuth chiffrés en base** (`integrations.access/refresh_token_encrypted`) via AES-GCM — jamais en clair, jamais côté client. Refresh transparent quand l'access token expire.
+- **State OAuth = user id** : simple et suffisant ici (flux déclenché depuis une session authentifiée, callback re-vérifie `getUser()` et compare). CSRF token signé prévu Phase 11 (durcissement).
+- **Calendrier read-only V1** : scopes en lecture seule (`.events.readonly`). La sync est unidirectionnelle Google→PINKEVO. La sync bidirectionnelle (création d'events depuis PINKEVO) est reportée — pas nécessaire pour le cockpit V1.
+- **Marqueur `[prep_sent]` dans `notes`** : évite d'ajouter une colonne juste pour l'idempotence du cron. Suffisant; une colonne dédiée pourra venir si besoin.
+- **Grille mois sans navigation** : V1 affiche le mois courant + agenda à venir. Navigation prev/next reportée Phase 11 (polish) — l'essentiel (voir/synchroniser/joindre) est là.
+
+### Points laissés pour plus tard
+- Sync bidirectionnelle Google (write) + vues semaine/jour : Phase 11.
+- Génération automatique du récap RDV par LLM (actuellement template structuré) : peut être branché sur un agent en Phase 11.
+
 ## Phases suivantes
 
-- Phase 5 : Calendrier
 - Phase 6 : Finance
 - Phase 7 : Sites & Audits
 - Phase 8 : Documents & Propales

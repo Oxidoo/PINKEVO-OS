@@ -69,9 +69,15 @@ export function IntegrationsPanel() {
             </Badge>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" size="sm" className="w-full" disabled>
-              Connecter (bientôt)
-            </Button>
+            {p.slug === "google" ? (
+              <Button asChild variant="outline" size="sm" className="w-full">
+                <a href="/api/google/connect">Connecter via OAuth</a>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" className="w-full" disabled>
+                Connecter (bientôt)
+              </Button>
+            )}
           </CardContent>
         </Card>
       ))}

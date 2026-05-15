@@ -15,4 +15,13 @@ export const agentRun = inngest.createFunction(
   },
 );
 
-export const functions = [ping, agentRun];
+/** Pre-meeting prep — runs every 5 min, pushes a Telegram recap ~30min before. */
+export const meetingPrep = inngest.createFunction(
+  { id: "meeting-prep", triggers: [{ cron: "*/5 * * * *" }] },
+  async () => {
+    const { runMeetingPrep } = await import("@/lib/calendar/prep");
+    return runMeetingPrep();
+  },
+);
+
+export const functions = [ping, agentRun, meetingPrep];
