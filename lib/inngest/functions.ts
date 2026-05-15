@@ -1,13 +1,18 @@
 import { inngest } from "./client";
 
-// Phase 4+: agent runs, cron audits, daily Telegram report, monthly finance roll-up.
-// Stubbed function so /api/inngest can be wired immediately.
 export const ping = inngest.createFunction(
-  {
-    id: "ping",
-    triggers: [{ event: "pinkevo/ping" }],
-  },
+  { id: "ping", triggers: [{ event: "pinkevo/ping" }] },
   async ({ event }) => ({ ok: true, ts: event.ts }),
 );
 
-export const functions = [ping];
+/** Async agent execution. Triggered by triggerAgentRun when Inngest is configured. */
+export const agentRun = inngest.createFunction(
+  { id: "agent-run", triggers: [{ event: "agent/run.requested" }] },
+  async ({ event }) => {
+    const { executeAgentRun } = await import("@/lib/ai/runs");
+    await executeAgentRun(event.data.runId as string);
+    return { ran: event.data.runId };
+  },
+);
+
+export const functions = [ping, agentRun];

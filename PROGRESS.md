@@ -172,9 +172,50 @@ Suivi des phases de build.
 - Tab « Templates emails » + « Webhooks reçus (debug) » dans Settings : Phase 11 (polish).
 - Tracking `openCount`/`clickCount` agrégé au niveau campagne : calculé à la volée pour l'instant, agrégation incrémentale via webhook en Phase 11.
 
+## Phase 4 — Agents IA ✅
+
+### Provider & coûts (`lib/ai/`)
+- [x] `provider.ts` : résolution modèle Anthropic/OpenAI via Vercel AI SDK, `hasLlm()`, fallback gracieux
+- [x] `cost.ts` : table de pricing USD/1M tokens + `computeCostUsd()` + `providerForModel()`
+- [x] `agents/llm.ts` : `llmJson()` — `generateObject` typé Zod, **fallback mock déterministe sans clé** (tokens=0, `mock:true`)
+
+### Les 5 agents (`lib/ai/agents/`)
+- [x] `lead_prospector` : Google Places (mock fallback) → LLM extraction contacts → crée des leads en DB
+- [x] `lead_qualifier` : Pappers + LLM scoring fit 0-100 → met à jour `leads.score` + statut
+- [x] `proposal_writer` : LLM propale structurée → crée `proposals` → email Resend si destinataire
+- [x] `seo_auditor` : PSI mobile+desktop → LLM 10 actions priorisées → crée `audits` (type seo)
+- [x] `perf_auditor` : PSI → LLM quick wins FR → crée `audits` (type performance)
+- [x] Registry `agents/index.ts` + `getHandler()`
+
+### Intégrations ajoutées
+- [x] `lib/integrations/google-maps/client.ts` : Places Text Search v1 + mock fallback
+- [x] `lib/integrations/psi/client.ts` : PageSpeed Insights v5 (marche sans clé, rate-limité) + mock fallback
+
+### Orchestration & tracking (`lib/ai/runs.ts`)
+- [x] `executeAgentRun(runId)` : exécuteur core — parse input, run handler, met à jour `agent_runs` (status/output/tokens/coût/durée), insère `api_usage`
+- [x] `triggerAgentRun(slug, input)` : crée le run `queued`, **dispatch Inngest si `INNGEST_EVENT_KEY`, sinon exécution inline** (UX fonctionnelle en démo sans worker)
+- [x] Fonction Inngest `agent-run` (event `agent/run.requested`) → `executeAgentRun`
+- [x] `updateAgentConfig`, `getAgentsWithStats` (runs/coût/succès du mois, dernière exéc.), `getAgentRuns`, `getAiCostBreakdown`
+
+### UI
+- [x] `/agents` : 5 cards avec stats (runs/mois, coût/mois, % succès, dernière exéc.), bouton Lancer
+- [x] `/agents/[slug]` : tabs Historique (status, summary, tokens, coût, durée) + Configuration (prompt système éditable, modèle, on/off)
+- [x] `LaunchDialog` générique : champs adaptés par agent, toast de progression
+- [x] `/agents/costs` : breakdown par agent + par jour/provider, total du mois
+
+### Décisions techniques
+- **Exécution inline si pas d'Inngest** : le spec demande Inngest, mais sans worker Inngest qui tourne (cas démo / preview Vercel sans config), les events ne seraient jamais traités. Hybride : Inngest si `INNGEST_EVENT_KEY` présent, sinon `await executeAgentRun()` dans la Server Action → l'UI affiche toujours le résultat. Le même core est partagé, zéro duplication.
+- **Mock déterministe partout** : chaque agent et chaque intégration externe (Maps, PSI, Pappers) renvoie un résultat mock crédible sans clé → la chaîne complète (création leads, scoring, propale, audit) est testable en démo. Les runs mock ont `tokens=0`/`cost=0` donc n'inversent pas les stats.
+- **`api_usage` alimenté seulement si tokens > 0** : pas de bruit dans les coûts pour les runs mock.
+- **Coût stocké en `numeric(12,6)`** : 6 décimales pour des coûts par run pouvant être < 1 centime.
+
+### Points laissés pour plus tard
+- Scrape réel des sites (Cheerio) dans `lead_prospector` : on s'appuie sur le LLM pour déduire les contacts à partir des données Places — scraping HTML ajouté en Phase 11 si besoin.
+- Streaming temps réel du résultat (toast de progression live) : actuellement le run est synchrone côté action, le résultat apparaît au refresh/revalidate. Streaming SSE en Phase 11.
+- GSC (Search Console) dans `seo_auditor` : OAuth GSC arrive en Phase 7, l'agent utilise PSI seul pour l'instant.
+
 ## Phases suivantes
 
-- Phase 4 : Agents IA
 - Phase 5 : Calendrier
 - Phase 6 : Finance
 - Phase 7 : Sites & Audits
