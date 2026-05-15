@@ -24,4 +24,13 @@ export const meetingPrep = inngest.createFunction(
   },
 );
 
-export const functions = [ping, agentRun, meetingPrep];
+/** Monthly finance roll-up — 1st of month at 08:00 Europe/Paris. */
+export const financeRollup = inngest.createFunction(
+  { id: "finance-rollup", triggers: [{ cron: "TZ=Europe/Paris 0 8 1 * *" }] },
+  async () => {
+    const { runFinanceRollup } = await import("@/lib/finance/rollup");
+    return runFinanceRollup();
+  },
+);
+
+export const functions = [ping, agentRun, meetingPrep, financeRollup];

@@ -251,9 +251,36 @@ Suivi des phases de build.
 - Sync bidirectionnelle Google (write) + vues semaine/jour : Phase 11.
 - Génération automatique du récap RDV par LLM (actuellement template structuré) : peut être branché sur un agent en Phase 11.
 
+## Phase 6 — Finance ✅
+
+### Stripe
+- [x] `lib/integrations/stripe/client.ts` : SDK init (no-op gracieux sans clé)
+- [x] `/api/stripe/webhook` : vérif signature `constructEvent` (fallback parse JSON sans secret), gère `customer.subscription.*` et `invoice.*` → upsert `subscriptions`/`invoices`
+- [x] `lib/finance/sync.ts` : `resolveClientId` (metadata.client_id → email contact), `recomputeClientMrr` (annuel /12, somme des subs actives)
+
+### Data & UI
+- [x] `lib/finance/queries.ts` : `getRevenueOverview` (MRR/ARR/clients actifs/factures), `getCostsOverview` (outils + API du mois), `getMarginSeries` (12 mois CA vs coûts)
+- [x] `lib/finance/actions.ts` : `addExpense`, `addToolSubscription` (saisie manuelle, owner/admin)
+- [x] `/finance` (owner/admin only) : 3 onglets Revenus / Coûts / Marge, KPI cards, tables factures & outils, dialogs d'ajout
+- [x] `MarginChart` Recharts (ComposedChart : barres CA + coûts, ligne marge) avec tokens de thème
+
+### Cron mensuel
+- [x] `lib/finance/rollup.ts` : `runFinanceRollup` — MRR courant vs encaissé du mois précédent, digest Telegram, alerte si variation > 10 %
+- [x] Fonction Inngest cron `finance-rollup` (`TZ=Europe/Paris 0 8 1 * *`)
+
+### Décisions techniques
+- **Mapping client Stripe** : `metadata.client_id` prioritaire, sinon email du contact. Pas de colonne `stripe_customer_id` sur `clients` ajoutée — le mapping via metadata est plus explicite et évite une migration ; à mettre lors de la création des customers côté Stripe.
+- **MRR recalculé depuis les subscriptions** (source de vérité Stripe) plutôt que saisi : `recomputeClientMrr` après chaque event subscription, annuel normalisé /12.
+- **Coûts API = table `api_usage`** déjà alimentée par les agents (Phase 4) — pas de pull externe Anthropic/OpenAI (leurs APIs usage sont instables/variables) ; la donnée réelle des runs est plus fiable. Pull externe possible en option plus tard.
+- **Webhook tolérant sans secret** : en dev/preview sans `STRIPE_WEBHOOK_SECRET`, parse le JSON directement (jamais en prod où le secret est requis). Durcissement Phase 11.
+- **Finance = owner/admin only** : `requireRole(['owner','admin'])` sur la page, cohérent avec la matrice RBAC.
+
+### Points laissés pour plus tard
+- Pull automatique de l'usage Anthropic/OpenAI via leurs APIs : optionnel, `api_usage` couvre déjà le coût réel des agents.
+- Snapshots MRR historiques (pour une vraie courbe MRR mois/mois) : l'alerte ±10 % compare au CA encaissé du mois précédent ; une table de snapshots mensuels viendra en Phase 11 si besoin d'historique précis.
+
 ## Phases suivantes
 
-- Phase 6 : Finance
 - Phase 7 : Sites & Audits
 - Phase 8 : Documents & Propales
 - Phase 9 : Automatisations
