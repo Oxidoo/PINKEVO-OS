@@ -1,12 +1,12 @@
 import { isNull } from "drizzle-orm";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { hasRole } from "@/lib/auth/rbac";
+import { getProfile, getUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { profiles, teamInvitations } from "@/lib/db/schema";
-import { getProfile, getUser } from "@/lib/auth/server";
-import { hasRole } from "@/lib/auth/rbac";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { IntegrationsPanel } from "./integrations-panel";
 import { ProfileForm } from "./profile-form";
 import { TeamPanel } from "./team-panel";
-import { IntegrationsPanel } from "./integrations-panel";
 
 export default async function SettingsPage() {
   const [profile, user] = await Promise.all([getProfile(), getUser()]);
@@ -43,11 +43,7 @@ export default async function SettingsPage() {
 
         {canManageTeam && (
           <TabsContent value="team" className="mt-6">
-            <TeamPanel
-              currentUserId={profile.id}
-              members={members}
-              invitations={pendingInvites}
-            />
+            <TeamPanel currentUserId={profile.id} members={members} invitations={pendingInvites} />
           </TabsContent>
         )}
 

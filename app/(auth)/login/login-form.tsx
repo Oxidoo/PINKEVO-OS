@@ -5,11 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  type AuthState,
-  signInWithGoogle,
-  signInWithPassword,
-} from "@/lib/auth/actions";
+import { type AuthState, signInWithGoogle, signInWithPassword } from "@/lib/auth/actions";
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -61,7 +57,10 @@ export function LoginForm() {
           />
         </div>
         {state?.error && (
-          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+          <p
+            className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            role="alert"
+          >
             {state.error}
           </p>
         )}

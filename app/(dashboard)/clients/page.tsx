@@ -1,11 +1,21 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { PageHeader } from "@/components/shared/page-header";
+import { requireUser } from "@/lib/auth/server";
+import { getClients } from "@/lib/crm/clients";
+import { ClientsView } from "./clients-view";
 
-export default function ClientsPage() {
+export const metadata = { title: "Clients" };
+
+export default async function ClientsPage() {
+  await requireUser();
+  const clients = await getClients();
+
   return (
-    <ComingSoon
-      title="Clients"
-      description="Fiche client (contacts, projets, sites, deals, factures, activités), filtres avancés, vues table/cards."
-      phase="Phase 2"
-    />
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Clients"
+        description={`${clients.length} client${clients.length > 1 ? "s" : ""} · CRM PINKEVO`}
+      />
+      <ClientsView clients={clients} />
+    </div>
   );
 }

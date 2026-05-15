@@ -1,10 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const credentialsSchema = z.object({
   email: z.string().email("Email invalide"),

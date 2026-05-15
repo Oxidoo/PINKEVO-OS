@@ -1,5 +1,4 @@
-import { pgSchema, uuid, text, timestamp } from "drizzle-orm/pg-core";
-import { pgTable, varchar } from "drizzle-orm/pg-core";
+import { pgSchema, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { idCol, timestamps } from "./_shared";
 import { locale, theme, userRole } from "./enums";
 

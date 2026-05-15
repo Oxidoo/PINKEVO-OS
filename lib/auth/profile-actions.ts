@@ -15,7 +15,10 @@ const profileSchema = z.object({
 
 export type SimpleState = { error?: string; ok?: boolean } | undefined;
 
-export async function updateMyProfile(_prev: SimpleState, formData: FormData): Promise<SimpleState> {
+export async function updateMyProfile(
+  _prev: SimpleState,
+  formData: FormData,
+): Promise<SimpleState> {
   const user = await requireUser();
   const parsed = profileSchema.safeParse({
     fullName: formData.get("fullName"),

@@ -1,15 +1,15 @@
 "use client";
 
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useActionState, useEffect, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -28,10 +28,10 @@ import {
 import {
   inviteTeammate,
   revokeInvitation,
-  updateMemberRole,
   type SimpleState,
+  updateMemberRole,
 } from "@/lib/auth/profile-actions";
-import { ROLES, ROLE_LABELS_FR, type Role } from "@/lib/auth/rbac";
+import { ROLE_LABELS_FR, ROLES, type Role } from "@/lib/auth/rbac";
 import type { Profile, TeamInvitation } from "@/lib/db/schema";
 
 function InviteSubmit() {
@@ -183,11 +183,7 @@ export function TeamPanel({ currentUserId, members, invitations }: TeamPanelProp
                       {format(inv.expiresAt, "d MMM yyyy", { locale: fr })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onRevoke(inv.id)}
-                      >
+                      <Button size="sm" variant="ghost" onClick={() => onRevoke(inv.id)}>
                         Révoquer
                       </Button>
                     </TableCell>

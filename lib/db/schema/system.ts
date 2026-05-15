@@ -1,18 +1,9 @@
-import {
-  bigint,
-  inet,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { bigint, inet, jsonb, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { idCol, timestamps } from "./_shared";
 import { profiles } from "./auth";
 import { clients } from "./crm";
-import { projects } from "./projects";
 import { documentType, integrationProvider } from "./enums";
+import { projects } from "./projects";
 
 export const documents = pgTable("documents", {
   id: idCol(),

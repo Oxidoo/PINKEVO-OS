@@ -14,8 +14,7 @@ export default function HomePage() {
           <br /> de l&apos;agence.
         </h1>
         <p className="max-w-xl text-balance text-muted-foreground">
-          CRM, leads, projets, sites, agents IA, automatisations, finance —
-          tout en un seul onglet.
+          CRM, leads, projets, sites, agents IA, automatisations, finance — tout en un seul onglet.
         </p>
       </div>
       <div className="flex items-center gap-3">

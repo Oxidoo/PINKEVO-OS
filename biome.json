@@ -14,7 +14,10 @@
       "!**/dist",
       "!**/.vercel",
       "!**/pnpm-lock.yaml",
-      "!**/drizzle"
+      "!**/drizzle",
+      "!components/ui",
+      "!**/*.css",
+      "!**/*.json"
     ]
   },
   "formatter": {

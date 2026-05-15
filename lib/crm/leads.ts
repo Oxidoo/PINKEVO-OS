@@ -1,0 +1,131 @@
+"use server";
+
+import { desc, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireRole } from "@/lib/auth/server";
+import { db } from "@/lib/db/client";
+import { clients, leads } from "@/lib/db/schema";
+import { searchCompany } from "@/lib/integrations/pappers/client";
+import type { ActionResult } from "./clients";
+import { leadInput, leadStatusValues } from "./validation";
+
+export async function getLeads() {
+  return db.select().from(leads).orderBy(desc(leads.createdAt));
+}
+
+export async function createLead(formData: FormData): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "sales"]);
+  const parsed = leadInput.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides" };
+  }
+  const { email, ...rest } = parsed.data;
+  const [row] = await db
+    .insert(leads)
+    .values({ ...rest, email: email || null, assignedTo: profile.id })
+    .returning({ id: leads.id });
+  revalidatePath("/leads");
+  return { ok: true, id: row?.id };
+}
+
+const statusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(leadStatusValues),
+});
+
+export async function updateLeadStatus(id: string, status: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  const parsed = statusSchema.safeParse({ id, status });
+  if (!parsed.success) return { ok: false, error: "Statut invalide" };
+  await db
+    .update(leads)
+    .set({
+      status: parsed.data.status,
+      lastContactedAt: parsed.data.status === "contacted" ? new Date() : undefined,
+    })
+    .where(eq(leads.id, parsed.data.id));
+  revalidatePath("/leads");
+  return { ok: true };
+}
+
+export async function enrichLead(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+  if (!lead) return { ok: false, error: "Lead introuvable" };
+  const query = lead.company ?? `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim();
+  if (!query) return { ok: false, error: "Aucune entreprise à enrichir" };
+
+  const company = await searchCompany(query);
+  if (!company) return { ok: false, error: "Aucun résultat Pappers" };
+
+  await db
+    .update(leads)
+    .set({
+      status: lead.status === "new" ? "enriched" : lead.status,
+      enrichmentData: { ...(lead.enrichmentData ?? {}), pappers: company },
+    })
+    .where(eq(leads.id, id));
+  revalidatePath("/leads");
+  return { ok: true };
+}
+
+const csvRowSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+});
+
+export async function importLeadsCsv(rows: unknown[]): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "sales"]);
+  const valid = rows
+    .map((r) => csvRowSchema.safeParse(r))
+    .filter((r): r is z.ZodSafeParseSuccess<z.infer<typeof csvRowSchema>> => r.success)
+    .map((r) => ({
+      firstName: r.data.firstName || null,
+      lastName: r.data.lastName || null,
+      email: r.data.email || null,
+      phone: r.data.phone || null,
+      company: r.data.company || null,
+      source: "csv" as const,
+      status: "new" as const,
+      assignedTo: profile.id,
+    }))
+    .filter((r) => r.email || r.company || r.lastName);
+
+  if (valid.length === 0) {
+    return { ok: false, error: "Aucune ligne valide dans le CSV" };
+  }
+  await db.insert(leads).values(valid);
+  revalidatePath("/leads");
+  return { ok: true, id: String(valid.length) };
+}
+
+export async function convertLeadToClient(id: string): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "sales"]);
+  const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+  if (!lead) return { ok: false, error: "Lead introuvable" };
+
+  const name =
+    lead.company ?? (`${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim() || "Sans nom");
+  const [client] = await db
+    .insert(clients)
+    .values({
+      name,
+      company: lead.company,
+      status: "active",
+      ownerId: profile.id,
+      acquiredAt: new Date(),
+    })
+    .returning({ id: clients.id });
+
+  await db
+    .update(leads)
+    .set({ status: "converted", convertedToClientId: client?.id })
+    .where(eq(leads.id, id));
+  revalidatePath("/leads");
+  revalidatePath("/clients");
+  return { ok: true, id: client?.id };
+}

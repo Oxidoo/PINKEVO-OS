@@ -1,9 +1,9 @@
-import { cache } from "react";
-import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { cache } from "react";
 import { db } from "@/lib/db/client";
-import { profiles, type Profile } from "@/lib/db/schema";
+import { type Profile, profiles } from "@/lib/db/schema";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasRole, type Role } from "./rbac";
 
 /**

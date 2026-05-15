@@ -1,5 +1,3 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   Bot,
   Briefcase,
@@ -13,11 +11,12 @@ import {
   Wallet,
   Workflow,
 } from "lucide-react";
-import { getUser } from "@/lib/auth/server";
-import { requireUser } from "@/lib/auth/server";
-import { ThemeToggle } from "@/components/shared/theme-toggle";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { LocaleToggle } from "@/components/shared/locale-toggle";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
+import { getUser, requireUser } from "@/lib/auth/server";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },

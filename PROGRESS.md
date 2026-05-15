@@ -82,13 +82,55 @@ Suivi des phases de build.
 - Verification d'email obligatoire : à valider côté Supabase project settings.
 - Tests unitaires `requireRole()` : ajoutés en Phase 11.
 
-## Phase 2 — CRM core (à venir)
+## Phase 2 — CRM core ✅
 
-- [ ] Module clients (CRUD, fiche détaillée, timeline activités, vue table/cards)
-- [ ] Module contacts
-- [ ] Module leads (kanban + table + import CSV + enrichissement Pappers/Sirene + Google Maps)
-- [ ] Module deals (kanban + forecast)
-- [ ] Seed `pnpm seed` avec données crédibles
+### Couche data (`lib/crm/`)
+- [x] `validation.ts` : schémas Zod (client, contact, lead, deal, activity) + table `STAGE_PROBABILITY`
+- [x] `clients.ts` : `createClient`, `updateClient`, `deleteClient`, `getClients`, `getClientDetail` (contacts + deals + activités)
+- [x] `contacts.ts` : `createContact`, `deleteContact`
+- [x] `activities.ts` : `logActivity` (timeline)
+- [x] `leads.ts` : `createLead`, `updateLeadStatus`, `enrichLead`, `importLeadsCsv`, `convertLeadToClient`
+- [x] `deals.ts` : `createDeal`, `updateDealStage` (proba auto par étape), `deleteDeal`
+- [x] Toutes les mutations passent par `requireRole()` (defense-in-depth en plus du RLS)
+
+### Intégration Pappers
+- [x] `lib/integrations/pappers/client.ts` : `searchCompany()` — appelle l'API v2 si `PAPPERS_API_KEY`, sinon mock déterministe (flag `mock: true`) pour rester testable sans clé
+
+### Module Clients
+- [x] Liste avec toggle table/cards, filtres (recherche + statut), badges statut
+- [x] Dialog création/édition (`ClientForm` réutilisable)
+- [x] Fiche détaillée `/clients/[id]` : tabs Activité / Contacts / Deals / Infos
+- [x] Timeline activités + composer inline
+- [x] Ajout de contacts via dialog
+
+### Module Leads
+- [x] Kanban 6 colonnes (new → enriched → contacted → qualified → converted → lost) avec dnd-kit
+- [x] Drag & drop optimiste (`useOptimistic`) → `updateLeadStatus`
+- [x] Création lead via dialog
+- [x] Import CSV avec mapping de colonnes intelligent (alias FR/EN, séparateur `,` ou `;`), parsing client-side
+- [x] Bouton "Enrichir" (Pappers) et "Convertir en client" sur chaque carte
+
+### Module Deals
+- [x] Pipeline kanban 5 étapes avec **montants cumulés par colonne**
+- [x] Bandeau forecast : pipeline ouvert, **forecast pondéré** (valeur × proba), gagné
+- [x] Drag & drop entre étapes (proba recalculée automatiquement)
+- [x] Création deal via dialog (rattachement client optionnel)
+
+### Seed & tooling
+- [x] `pnpm seed` : 5 clients, contacts, 5 leads (sources variées), 4 deals, activités — données FR crédibles
+- [x] Biome : exclusion `components/ui` (shadcn généré) + `*.css`/`*.json` (Tailwind v4 at-rules non parsables) → lint clean
+- [x] typecheck + build OK (23 routes, `/clients/[id]` ajouté)
+
+### Décisions techniques
+- **Pappers mock fallback** : sans clé API, on renvoie un objet mock `{ mock: true }` plutôt que d'échouer — permet de tester tout le flow d'enrichissement en démo.
+- **Drag & drop optimiste** : `useOptimistic` + `useState` local pour un feedback instantané; la Server Action revalide en arrière-plan, toast d'erreur si échec.
+- **`numeric` Drizzle = string** : montants stockés/retournés en string, conversion via `Number()` au calcul et `formatCurrency()` (Intl fr-FR) à l'affichage.
+- **Biome exclut `components/ui`** : code shadcn généré, on ne le lint pas (pratique standard) — notre code applicatif reste 100% lint-clean.
+
+### Points laissés pour plus tard
+- Prospection Google Maps (création de leads via Places API) : déplacée en **Phase 4** car portée par l'agent `lead_prospector`.
+- Score IA auto à la création de lead : **Phase 4** (agent `lead_qualifier`).
+- Édition/suppression de lead et deal depuis l'UI : CRUD de base présent, édition inline à enrichir en Phase 11 (polish).
 
 ## Phases suivantes
 

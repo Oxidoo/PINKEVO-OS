@@ -1,17 +1,57 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const PROVIDERS = [
-  { slug: "google", name: "Google", description: "Calendar + Search Console (OAuth)", phase: "Phase 5/7" },
-  { slug: "cal_com", name: "Cal.com", description: "Bookings publics + webhooks", phase: "Phase 5" },
+  {
+    slug: "google",
+    name: "Google",
+    description: "Calendar + Search Console (OAuth)",
+    phase: "Phase 5/7",
+  },
+  {
+    slug: "cal_com",
+    name: "Cal.com",
+    description: "Bookings publics + webhooks",
+    phase: "Phase 5",
+  },
   { slug: "stripe", name: "Stripe", description: "Subscriptions, factures, MRR", phase: "Phase 6" },
-  { slug: "resend", name: "Resend", description: "Envoi d'emails transactionnels & campagnes", phase: "Phase 3" },
-  { slug: "telegram", name: "Telegram", description: "Reporting quotidien + commandes", phase: "Phase 10" },
-  { slug: "pappers", name: "Pappers", description: "Enrichissement leads FR (SIREN, CA)", phase: "Phase 2" },
-  { slug: "anthropic", name: "Anthropic", description: "Claude pour les agents IA", phase: "Phase 4" },
-  { slug: "openai", name: "OpenAI", description: "GPT pour agents IA alternatifs", phase: "Phase 4" },
-  { slug: "elevenlabs", name: "ElevenLabs", description: "Briefings audio TTS optionnels", phase: "Phase 5" },
+  {
+    slug: "resend",
+    name: "Resend",
+    description: "Envoi d'emails transactionnels & campagnes",
+    phase: "Phase 3",
+  },
+  {
+    slug: "telegram",
+    name: "Telegram",
+    description: "Reporting quotidien + commandes",
+    phase: "Phase 10",
+  },
+  {
+    slug: "pappers",
+    name: "Pappers",
+    description: "Enrichissement leads FR (SIREN, CA)",
+    phase: "Phase 2",
+  },
+  {
+    slug: "anthropic",
+    name: "Anthropic",
+    description: "Claude pour les agents IA",
+    phase: "Phase 4",
+  },
+  {
+    slug: "openai",
+    name: "OpenAI",
+    description: "GPT pour agents IA alternatifs",
+    phase: "Phase 4",
+  },
+  {
+    slug: "elevenlabs",
+    name: "ElevenLabs",
+    description: "Briefings audio TTS optionnels",
+    phase: "Phase 5",
+  },
 ] as const;
 
 export function IntegrationsPanel() {
