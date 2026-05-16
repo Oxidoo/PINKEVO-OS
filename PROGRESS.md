@@ -394,6 +394,41 @@ Suivi des phases de build.
 - Boutons inline / clavier Telegram : réponses texte Markdown pour le V1.
 - Enregistrement automatique du webhook (`setWebhook`) : à faire manuellement au déploiement (documenté).
 
-## Phases suivantes
+## Phase 11 — Dashboard & Polish ✅
 
-- Phase 11 : Dashboard & Polish
+### Dashboard global (`/dashboard`)
+- [x] `lib/dashboard/queries.ts` : `getDashboardData` — KPIs (MRR, clients actifs, leads chauds, marge du mois), série CA vs coûts 6 mois, todo (leads à relancer, propales en attente), activité récente, wins du mois (deals gagnés, nouveaux clients, propales acceptées)
+- [x] 4 `KpiCard` animées (compteur `AnimatedNumber` via framer-motion, hover `y:-2 scale:1.005`)
+- [x] Graphique CA vs coûts (réutilise `MarginChart` Recharts)
+- [x] `WinsCarousel` : carrousel auto 4 s + **confetti plein écran** au montage s'il y a des wins
+- [x] Cartes « À faire aujourd'hui » + « Activité récente »
+
+### Célébrations
+- [x] `components/celebrations/confetti.ts` : `fireConfetti()` (plein écran rose/violet) + `fireConfettiAt(x,y)` (localisé)
+- [x] `AnimatedNumber` réutilisable (count-up easeOut)
+
+### Tests
+- [x] Vitest : `vitest.config.ts` (alias `@`) + `tests/unit/rbac.test.ts` (hasRole) — **3 tests verts**
+- [x] Playwright : `playwright.config.ts` (webServer auto) + `tests/e2e/smoke.spec.ts` (landing, login, redirect dashboard→login)
+
+### Décisions techniques
+- **Série dashboard = MRR courant projeté sur 6 mois** vs coûts agents réels par mois : pas d'historique MRR snapshot (décision Phase 6 maintenue) ; donne une lecture de tendance immédiate sans table supplémentaire.
+- **Confetti au montage si wins** : déclenché côté client quand `wins.length > 0` — simple, déterministe, pas d'état serveur de « déjà célébré » (acceptable pour un dashboard rafraîchi).
+- **`AnimatedNumber` via framer-motion `animate()`** plutôt qu'une lib CountUp dédiée : zéro dépendance en plus, déjà dans le bundle.
+- **i18n** : le switcher FR/EN est fonctionnel (cookie + `next-intl`), dictionnaires `nav`/`common`/`auth`/`dashboard` fournis. De nombreux libellés métier restent en FR (langue par défaut produit) — extraction exhaustive des chaînes laissée comme amélioration continue, non bloquante pour le V1 FR-first.
+- **Tests** : unitaire sur la logique RBAC pure (sans DB) ; e2e smoke sur les parcours publics/redirection. Les flows authentifiés profonds nécessitent une base seedée (hors périmètre CI sans Supabase).
+
+### Points laissés pour amélioration continue
+- i18n EN exhaustif (extraction de toutes les chaînes métier).
+- Célébrations contextuelles temps réel (toast + confetti localisé sur deal won dans le kanban, banner record MRR 24 h) : briques prêtes (`fireConfettiAt`), câblage par événement à compléter.
+- Realtime Supabase sur l'activité récente (actuellement au refresh).
+- Audit Lighthouse a11y > 95 : structure a11y en place (labels, aria, focus, contraste AA) ; passage Lighthouse formel à faire sur l'environnement déployé.
+
+---
+
+# 🎉 Build terminé — Phases 0 → 11 livrées
+
+PINKEVO OS est scaffoldé de bout en bout : setup, fondations (DB+RLS+auth), CRM,
+communication, agents IA, calendrier, finance, sites & audits, documents &
+propales, automatisations, bot Telegram, dashboard & polish. `typecheck`,
+`lint` et `build` verts à chaque phase. Voir le `README.md` pour le démarrage.
