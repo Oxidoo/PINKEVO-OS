@@ -34,6 +34,7 @@ export const env = createEnv({
 
     // Telegram
     TELEGRAM_BOT_TOKEN: z.string().optional(),
+    TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
 
     // Pappers
     PAPPERS_API_KEY: z.string().optional(),
@@ -73,6 +74,7 @@ export const env = createEnv({
     CAL_COM_API_KEY: process.env.CAL_COM_API_KEY,
     CAL_COM_WEBHOOK_SECRET: process.env.CAL_COM_WEBHOOK_SECRET,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
     PAPPERS_API_KEY: process.env.PAPPERS_API_KEY,
     INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
     INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,

@@ -369,7 +369,31 @@ Suivi des phases de build.
 - Historique d'exécution détaillé par automatisation (au-delà de `lastRunAt`) : Phase 11.
 - `onboarding_email` envoie un log faute de resolver d'email contact client : à compléter quand le mapping contact principal sera exposé (Phase 11).
 
+## Phase 10 — Telegram bot ✅
+
+### Commandes (`lib/telegram/commands.ts`)
+- [x] `authorizeChat(chatId)` : autorisation par `profiles.telegram_chat_id` (un chat non rattaché à un membre est rejeté)
+- [x] `/leads` (compte par statut), `/mrr` (MRR/ARR/clients actifs), `/today` (résumé du jour), `/help`
+- [x] `/run <agent> clé=valeur` : crée un `agent_runs` + exécute (Inngest ou inline) — alias `ville→city`, `mot→keyword`
+- [x] Webhook `/api/telegram/webhook` : secret optionnel (`x-telegram-bot-api-secret-token`), parse l'update, autorise, répond via Telegram
+
+### Rapport quotidien (`lib/telegram/daily.ts`)
+- [x] `runDailyReport` : Hier (leads, emails, runs+coût IA) · Aujourd'hui (RDV, propales >3j sans réponse) · Alertes (sites perf<70, factures impayées >7j)
+- [x] Envoi à tous les membres ayant un `telegram_chat_id`
+- [x] Cron Inngest `daily-report` (`TZ=Europe/Paris 0 8 * * *`)
+
+### Env
+- [x] `TELEGRAM_WEBHOOK_SECRET` ajouté (env.ts + .env.example)
+
+### Décisions techniques
+- **`/run` sans session** : le webhook n'a pas de session Supabase, donc `cmdRun` enquête directement (`agent_runs` + `executeAgentRun`) au lieu d'appeler la Server Action `triggerAgentRun` (qui exige `requireRole`/cookies). L'autorisation est portée par `authorizeChat` (le chat doit matcher un profil) — `triggeredBy = profileId`.
+- **Autorisation par chat ID = profil** : pas de gestion de rôle fine côté bot pour le V1 ; tout membre ayant lié son chat peut utiliser les commandes. Affinage RBAC par commande possible en Phase 11.
+- **Secret webhook optionnel** : si `TELEGRAM_WEBHOOK_SECRET` absent (dev), on accepte ; en prod on l'enregistre via `setWebhook`.
+
+### Points laissés pour plus tard
+- Boutons inline / clavier Telegram : réponses texte Markdown pour le V1.
+- Enregistrement automatique du webhook (`setWebhook`) : à faire manuellement au déploiement (documenté).
+
 ## Phases suivantes
 
-- Phase 10 : Telegram bot
 - Phase 11 : Dashboard & Polish

@@ -61,6 +61,15 @@ export const automationDispatch = inngest.createFunction(
   },
 );
 
+/** Daily Telegram report — 08:00 Europe/Paris. */
+export const dailyReport = inngest.createFunction(
+  { id: "daily-report", triggers: [{ cron: "TZ=Europe/Paris 0 8 * * *" }] },
+  async () => {
+    const { runDailyReport } = await import("@/lib/telegram/daily");
+    return runDailyReport();
+  },
+);
+
 export const functions = [
   ping,
   agentRun,
@@ -69,4 +78,5 @@ export const functions = [
   weeklyAudits,
   automationRun,
   automationDispatch,
+  dailyReport,
 ];
