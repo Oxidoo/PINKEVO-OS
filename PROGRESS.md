@@ -307,9 +307,39 @@ Suivi des phases de build.
 - Génération + envoi du rapport PDF au client : Phase 8 (génération PDF) puis branchement option « envoyer au client ».
 - Suivi de positions de mots-clés dans le temps (graphe) : Phase 11.
 
+## Phase 8 — Documents & Propales ✅
+
+### Storage Supabase
+- [x] `lib/supabase/admin.ts` : client service-role **lazy** (`getSupabaseAdmin()`), bucket privé `documents`
+- [x] `lib/documents/storage.ts` : `uploadToStorage` (ensureBucket auto), `getSignedUrl` (URLs signées 1h), `deleteFromStorage`
+- [x] `lib/documents/actions.ts` : `getDocuments`, `uploadDocument` (limite 25 Mo, path `clientId/timestamp-name`), `getDocumentUrl`, `deleteDocument`
+- [x] `/documents` : upload bouton + table (taille humaine, ouvrir via URL signée, supprimer)
+
+### Génération PDF des propales
+- [x] `lib/proposals/pdf.tsx` : composant `@react-pdf/renderer` (charte rose PINKEVO, contexte/objectifs/livrables/planning/prix) + `renderProposalPdf`
+- [x] `/api/proposals/[id]/pdf` (runtime nodejs, force-dynamic) : génère le PDF, l'upload dans Storage, met à jour `pdfUrl`, le stream inline
+- [x] `lib/proposals/actions.ts` : `getProposals`, `ensureProposalToken`
+- [x] `/proposals` : table des propales (statut, montants) + actions PDF / copier lien signature
+
+### Signature électronique légère
+- [x] `lib/proposals/public.ts` : `getProposalByToken` (marque `viewed`), `acceptProposal` (enregistre **IP + horodatage**, statut `accepted`)
+- [x] `/p/[token]` : page **publique** (hors auth) — rendu de la propale + bouton « Accepter & signer », mention valeur signature
+- [x] `proposal_writer` (agent) génère désormais un `signatureToken` et envoie le lien `/p/{token}` par email
+
+### Décisions techniques
+- **Client Supabase admin lazy** : `createClient` lançait à l'import quand l'env est vide au build (collect-page-data). Construction paresseuse + `@react-pdf/renderer` en `serverExternalPackages` → build vert.
+- **Signature = token + IP + timestamp** loggés (`signatureToken`, `signedIp`, `acceptedAt`) : « signature électronique légère » comme spécifié, suffisant pour un accord commercial PME (pas d'eIDAS qualifié).
+- **PDF régénéré à la demande** et ré-uploadé (source de vérité = `proposals.content` JSON) plutôt que stocké figé : toujours à jour si le contenu change.
+- **Page `/p/[token]` publique** : requête DB directe (rôle DB superuser bypass RLS) sans session — accès anonyme volontaire pour signature client.
+- **Bucket privé + URLs signées** (jamais public) pour tous les documents.
+
+### Points laissés pour plus tard
+- Aperçu PDF inline dans le drive (iframe) : ouverture via URL signée pour l'instant, viewer embarqué en Phase 11.
+- Organisation en dossiers par client/projet dans l'UI : le `storagePath` est déjà préfixé par client, l'arborescence visuelle arrive en Phase 11.
+- Refus de proposition (statut `rejected`) côté page publique : seul l'« accepter » est exposé pour le V1.
+
 ## Phases suivantes
 
-- Phase 8 : Documents & Propales
 - Phase 9 : Automatisations
 - Phase 10 : Telegram bot
 - Phase 11 : Dashboard & Polish

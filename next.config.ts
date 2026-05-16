@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
-  serverExternalPackages: ["pino", "postgres"],
+  serverExternalPackages: ["pino", "postgres", "@react-pdf/renderer"],
 };
 
 export default withNextIntl(nextConfig);

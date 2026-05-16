@@ -70,6 +70,8 @@ export const proposalWriter: AgentHandler<typeof inputSchema> = {
       },
     });
 
+    const signatureToken =
+      crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
     const [row] = await db
       .insert(proposals)
       .values({
@@ -81,6 +83,7 @@ export const proposalWriter: AgentHandler<typeof inputSchema> = {
         totalRecurring: String(data.totalRecurring),
         status: "sent",
         sentAt: new Date(),
+        signatureToken,
       })
       .returning({ id: proposals.id });
 
@@ -91,7 +94,7 @@ export const proposalWriter: AgentHandler<typeof inputSchema> = {
         react: ProposalEmail({
           contactName: targetName,
           proposalTitle: data.title,
-          viewUrl: `${env.NEXT_PUBLIC_APP_URL}/proposals/${row.id}`,
+          viewUrl: `${env.NEXT_PUBLIC_APP_URL}/p/${signatureToken}`,
         }),
       });
     }
