@@ -33,4 +33,13 @@ export const financeRollup = inngest.createFunction(
   },
 );
 
-export const functions = [ping, agentRun, meetingPrep, financeRollup];
+/** Weekly site re-audit — Monday 07:00 Europe/Paris. */
+export const weeklyAudits = inngest.createFunction(
+  { id: "weekly-audits", triggers: [{ cron: "TZ=Europe/Paris 0 7 * * 1" }] },
+  async () => {
+    const { runWeeklyAudits } = await import("@/lib/websites/cron");
+    return runWeeklyAudits();
+  },
+);
+
+export const functions = [ping, agentRun, meetingPrep, financeRollup, weeklyAudits];

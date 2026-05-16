@@ -279,9 +279,36 @@ Suivi des phases de build.
 - Pull automatique de l'usage Anthropic/OpenAI via leurs APIs : optionnel, `api_usage` couvre déjà le coût réel des agents.
 - Snapshots MRR historiques (pour une vraie courbe MRR mois/mois) : l'alerte ±10 % compare au CA encaissé du mois précédent ; une table de snapshots mensuels viendra en Phase 11 si besoin d'historique précis.
 
+## Phase 7 — Sites & Audits ✅
+
+### Intégrations Google
+- [x] `lib/integrations/google/token.ts` : `getGoogleAccessToken(userId)` — récupération + refresh transparent du token (réutilisable GSC + Calendar)
+- [x] `lib/integrations/google/gsc.ts` : `fetchGscSummary` — Search Console searchAnalytics (clics, impressions, top requêtes/positions), fallback gracieux non connecté
+
+### Data & UI
+- [x] `lib/websites/queries.ts` : `getWebsitesWithScores` (dernier score SEO/perf par site), `getWebsiteDetail` (historique audits)
+- [x] `lib/websites/actions.ts` : `createWebsite`, `toggleMonitoring`, `runFullAudit` (lance seo_auditor + perf_auditor en parallèle via Inngest ou inline)
+- [x] `/websites` : grille de cards avec pastilles de score colorées (vert ≥90 / ambre ≥70 / rouge), dialog de création (rattachement client + CMS)
+- [x] `/websites/[id]` : onglets Audits (historique) + Search Console (clics/impressions/top requêtes), bouton « Audit complet maintenant »
+
+### Cron hebdo
+- [x] `lib/websites/cron.ts` : `runWeeklyAudits` — re-audit PSI mobile des sites suivis, enregistre un audit perf, alerte Telegram si chute > 10 pts vs précédent
+- [x] Fonction Inngest cron `weekly-audits` (`TZ=Europe/Paris 0 7 * * 1` — lundi 7h)
+
+### Décisions techniques
+- **Token Google factorisé** dans `token.ts` (refresh + déchiffrement) — partagé GSC/Calendar, pas de duplication de la logique OAuth.
+- **`runFullAudit` réutilise le moteur d'agents Phase 4** : crée des `agent_runs` pour `seo_auditor`/`perf_auditor` et passe par `executeAgentRun` (inline) ou Inngest si configuré → tracking coût/tokens cohérent avec le module Agents.
+- **Rôle producer autorisé** sur les sites/audits (`requireRole(['owner','admin','manager','producer'])`) conformément à la matrice RBAC.
+- **Cron hebdo PSI seul** (pas de LLM) pour rester gratuit/rapide ; l'audit complet avec analyse LLM reste déclenché manuellement ou via automatisation.
+- **Scores affichés = max des audits** par type (le meilleur score atteint), simple et lisible pour le cockpit ; historique complet disponible dans l'onglet détail.
+
+### Points laissés pour plus tard
+- Détail des recommandations LLM (10 actions priorisées) affiché brut dans `audits.rawData` — rendu UI structuré en Phase 11.
+- Génération + envoi du rapport PDF au client : Phase 8 (génération PDF) puis branchement option « envoyer au client ».
+- Suivi de positions de mots-clés dans le temps (graphe) : Phase 11.
+
 ## Phases suivantes
 
-- Phase 7 : Sites & Audits
 - Phase 8 : Documents & Propales
 - Phase 9 : Automatisations
 - Phase 10 : Telegram bot
