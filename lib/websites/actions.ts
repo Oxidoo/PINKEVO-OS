@@ -23,6 +23,10 @@ export async function createWebsite(formData: FormData): Promise<ActionResult> {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides" };
   }
   const [row] = await db.insert(websites).values(parsed.data).returning({ id: websites.id });
+  if (row) {
+    const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+    await dispatchAutomationEvent("pinkevo/website.delivered", { websiteId: row.id });
+  }
   revalidatePath("/websites");
   return { ok: true, id: row?.id };
 }

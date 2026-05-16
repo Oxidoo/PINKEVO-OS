@@ -51,6 +51,16 @@ export async function updateDealStage(id: string, stage: string): Promise<Action
       probability: STAGE_PROBABILITY[parsed.data.stage],
     })
     .where(eq(deals.id, parsed.data.id));
+
+  if (parsed.data.stage === "won") {
+    const [deal] = await db.select().from(deals).where(eq(deals.id, parsed.data.id)).limit(1);
+    const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+    await dispatchAutomationEvent("pinkevo/deal.won", {
+      leadId: deal?.leadId ?? undefined,
+      clientId: deal?.clientId ?? undefined,
+    });
+  }
+
   revalidatePath("/deals");
   return { ok: true };
 }

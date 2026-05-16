@@ -98,7 +98,11 @@ export async function importLeadsCsv(rows: unknown[]): Promise<ActionResult> {
   if (valid.length === 0) {
     return { ok: false, error: "Aucune ligne valide dans le CSV" };
   }
-  await db.insert(leads).values(valid);
+  const inserted = await db.insert(leads).values(valid).returning({ id: leads.id });
+  const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+  for (const row of inserted.slice(0, 50)) {
+    await dispatchAutomationEvent("pinkevo/lead.created", { leadId: row.id });
+  }
   revalidatePath("/leads");
   return { ok: true, id: String(valid.length) };
 }

@@ -42,4 +42,31 @@ export const weeklyAudits = inngest.createFunction(
   },
 );
 
-export const functions = [ping, agentRun, meetingPrep, financeRollup, weeklyAudits];
+/** Manual automation run requested from the UI. */
+export const automationRun = inngest.createFunction(
+  { id: "automation-run", triggers: [{ event: "automation/triggered" }] },
+  async ({ event }) => {
+    const { runAutomation } = await import("@/lib/automations/engine");
+    return runAutomation(event.data.automationId as string, event.data.payload ?? {});
+  },
+);
+
+/** Domain-event router → matching enabled automations. */
+export const automationDispatch = inngest.createFunction(
+  { id: "automation-dispatch", triggers: [{ event: "pinkevo/automation.event" }] },
+  async ({ event }) => {
+    const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+    const ran = await dispatchAutomationEvent(event.data.event as string, event.data.payload ?? {});
+    return { ran };
+  },
+);
+
+export const functions = [
+  ping,
+  agentRun,
+  meetingPrep,
+  financeRollup,
+  weeklyAudits,
+  automationRun,
+  automationDispatch,
+];

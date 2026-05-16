@@ -338,8 +338,38 @@ Suivi des phases de build.
 - Organisation en dossiers par client/projet dans l'UI : le `storagePath` est déjà préfixé par client, l'arborescence visuelle arrive en Phase 11.
 - Refus de proposition (statut `rejected`) côté page publique : seul l'« accepter » est exposé pour le V1.
 
+## Phase 9 — Automatisations ✅
+
+### Moteur (`lib/automations/`)
+- [x] `engine.ts` : `runAutomation(id, payload)` exécute les étapes en séquence ; 5 step kinds (`qualify_lead`, `audit_site`, `send_followup`, `create_client_from_lead`, `onboarding_email`) réutilisant agents/email/CRM
+- [x] `templates.ts` : 3 templates pré-créés (lead → qualifier → email ; deal gagné → client + onboarding ; site livré → audit)
+- [x] `dispatch.ts` : `dispatchAutomationEvent(event, payload)` — trouve les automatisations actives matchant l'event (`triggerConfig->>'event'`) et les exécute inline
+- [x] `actions.ts` : `getAutomations`, `createFromTemplate`, `createAutomation` (builder custom), `toggleAutomation`, `deleteAutomation`, `runAutomationNow`
+
+### Déclencheurs domaine
+- [x] Deal → `won` émet `pinkevo/deal.won` (leadId/clientId)
+- [x] Import CSV émet `pinkevo/lead.created` par lead (cap 50)
+- [x] Création de site émet `pinkevo/website.delivered`
+
+### Inngest
+- [x] `automation-run` (event `automation/triggered`) + `automation-dispatch` (event router) — délèguent au même moteur
+
+### UI
+- [x] `/automations` (owner/admin/manager) : cards templates « Utiliser ce template », liste avec toggle actif/off, bouton Lancer, suppression, dialog builder custom (nom + trigger + 1-3 étapes)
+
+### Décisions techniques
+- **Dispatch inline aux points domaine** plutôt que dépendre d'un worker Inngest : `dispatchAutomationEvent` est appelé directement dans `updateDealStage`/`importLeadsCsv`/`createWebsite` → fonctionne en démo sans Inngest, les fonctions Inngest délèguent au même code (zéro duplication).
+- **Imports dynamiques** (`await import("@/lib/automations/dispatch")`) aux points domaine pour éviter d'alourdir les chemins CRM/sites qui ne déclenchent pas toujours d'automatisation.
+- **Builder V1 borné** (1 à 3 étapes, steps prédéfinis) comme spécifié — pas de DAG/branchements, étendu en V2.
+- **Steps `jsonb`** typés `AutomationStep` côté lecture via cast `unknown` (Drizzle type le jsonb en `Record<string,unknown>[]`).
+- **Automatisations créées désactivées** par défaut (sécurité : on les active explicitement après revue).
+
+### Points laissés pour plus tard
+- Conditions/branchements et délais entre étapes (J+30/60/90 du template audit) : V1 exécute les étapes séquentiellement immédiatement ; la planification différée s'appuiera sur Inngest `step.sleep` en Phase 11.
+- Historique d'exécution détaillé par automatisation (au-delà de `lastRunAt`) : Phase 11.
+- `onboarding_email` envoie un log faute de resolver d'email contact client : à compléter quand le mapping contact principal sera exposé (Phase 11).
+
 ## Phases suivantes
 
-- Phase 9 : Automatisations
 - Phase 10 : Telegram bot
 - Phase 11 : Dashboard & Polish
