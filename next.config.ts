@@ -3,10 +3,24 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
 
+function getAllowedOrigins(): string[] {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) return [];
+  try {
+    return [new URL(appUrl).host];
+  } catch {
+    return [];
+  }
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
-  experimental: {},
+  experimental: {
+    serverActions: {
+      allowedOrigins: getAllowedOrigins(),
+    },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },
