@@ -2,7 +2,7 @@
 
 import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { requireRole } from "@/lib/auth/server";
+import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { activities, clients, contacts, deals } from "@/lib/db/schema";
 import { clientInput } from "./validation";
@@ -57,10 +57,12 @@ export async function deleteClient(id: string): Promise<ActionResult> {
 }
 
 export async function getClients() {
-  return db.select().from(clients).orderBy(desc(clients.createdAt));
+  await requireUser();
+  return db.select().from(clients).orderBy(desc(clients.createdAt)).limit(500);
 }
 
 export async function getClientDetail(id: string) {
+  await requireUser();
   const [client] = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
   if (!client) return null;
   const [clientContacts, clientDeals, clientActivities] = await Promise.all([

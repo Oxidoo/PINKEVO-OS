@@ -86,7 +86,20 @@ export async function inviteTeammate(_prev: SimpleState, formData: FormData): Pr
 }
 
 export async function updateMemberRole(memberId: string, role: Role): Promise<SimpleState> {
-  await requireRole(["owner", "admin"]);
+  const actor = await requireRole(["owner", "admin"]);
+  if (memberId === actor.id) {
+    return { error: "Vous ne pouvez pas modifier votre propre rôle" };
+  }
+  const [target] = await db
+    .select({ role: profiles.role })
+    .from(profiles)
+    .where(eq(profiles.id, memberId))
+    .limit(1);
+  if (!target) return { error: "Membre introuvable" };
+  // Only an owner may grant the owner role or alter an existing owner.
+  if ((role === "owner" || target.role === "owner") && actor.role !== "owner") {
+    return { error: "Seul un owner peut gérer le rôle owner" };
+  }
   await db.update(profiles).set({ role }).where(eq(profiles.id, memberId));
   revalidatePath("/settings");
   return { ok: true };

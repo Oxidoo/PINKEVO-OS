@@ -70,7 +70,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       {lead.score > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">Score : {lead.score}/100</p>
       )}
-      <div className="mt-2 flex gap-1">
+      <div className="mt-2 flex flex-wrap gap-1">
         <Button
           size="sm"
           variant="ghost"
@@ -109,7 +109,7 @@ function LeadCard({ lead }: { lead: Lead }) {
 function Column({ id, label, leads }: { id: string; label: string; leads: Lead[] }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className="flex min-w-0 flex-col">
       <div className="mb-2 flex items-center justify-between px-1">
         <span className="text-sm font-medium">{label}</span>
         <Badge variant="secondary">{leads.length}</Badge>
@@ -153,7 +153,7 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="grid grid-cols-2 gap-3 pb-4 sm:grid-cols-3 xl:grid-cols-6">
         {COLUMNS.map((col) => (
           <Column
             key={col.id}
