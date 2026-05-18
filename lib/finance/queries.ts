@@ -69,34 +69,34 @@ export async function getCostsOverview() {
 export async function getMarginSeries() {
   const since = monthsAgo(11);
 
-  const revenue = await db
-    .select({
-      month: sql<string>`to_char(${invoices.paidAt}, 'YYYY-MM')`,
-      total: sql<string>`coalesce(sum(${invoices.total}), 0)`,
-    })
-    .from(invoices)
-    .where(sql`${invoices.paidAt} is not null and ${invoices.paidAt} >= ${since}`)
-    .groupBy(sql`to_char(${invoices.paidAt}, 'YYYY-MM')`);
-
-  const expense = await db
-    .select({
-      month: sql<string>`to_char(coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}), 'YYYY-MM')`,
-      total: sql<string>`coalesce(sum(${expenses.amount}), 0)`,
-    })
-    .from(expenses)
-    .where(sql`coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}) >= ${since}`)
-    .groupBy(
-      sql`to_char(coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}), 'YYYY-MM')`,
-    );
-
-  const api = await db
-    .select({
-      month: sql<string>`to_char(${apiUsage.date}, 'YYYY-MM')`,
-      total: sql<string>`coalesce(sum(${apiUsage.costUsd}), 0)`,
-    })
-    .from(apiUsage)
-    .where(gte(apiUsage.date, since.toISOString().slice(0, 10)))
-    .groupBy(sql`to_char(${apiUsage.date}, 'YYYY-MM')`);
+  const [revenue, expense, api] = await Promise.all([
+    db
+      .select({
+        month: sql<string>`to_char(${invoices.paidAt}, 'YYYY-MM')`,
+        total: sql<string>`coalesce(sum(${invoices.total}), 0)`,
+      })
+      .from(invoices)
+      .where(sql`${invoices.paidAt} is not null and ${invoices.paidAt} >= ${since}`)
+      .groupBy(sql`to_char(${invoices.paidAt}, 'YYYY-MM')`),
+    db
+      .select({
+        month: sql<string>`to_char(coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}), 'YYYY-MM')`,
+        total: sql<string>`coalesce(sum(${expenses.amount}), 0)`,
+      })
+      .from(expenses)
+      .where(sql`coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}) >= ${since}`)
+      .groupBy(
+        sql`to_char(coalesce(${expenses.billingPeriodStart}, ${expenses.createdAt}), 'YYYY-MM')`,
+      ),
+    db
+      .select({
+        month: sql<string>`to_char(${apiUsage.date}, 'YYYY-MM')`,
+        total: sql<string>`coalesce(sum(${apiUsage.costUsd}), 0)`,
+      })
+      .from(apiUsage)
+      .where(gte(apiUsage.date, since.toISOString().slice(0, 10)))
+      .groupBy(sql`to_char(${apiUsage.date}, 'YYYY-MM')`),
+  ]);
 
   const revMap = new Map(revenue.map((r) => [r.month, Number(r.total)]));
   const expMap = new Map(expense.map((r) => [r.month, Number(r.total)]));

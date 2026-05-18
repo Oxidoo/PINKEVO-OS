@@ -1,0 +1,148 @@
+"use client";
+
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Building2, Calendar, Mail, Phone, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import type { Lead } from "@/lib/db/schema";
+
+function leadName(lead: Lead) {
+  const n = `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim();
+  return n || lead.company || lead.email || "Lead sans nom";
+}
+
+export function LeadSheet({
+  lead,
+  open,
+  onClose,
+}: {
+  lead: Lead | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!lead) return null;
+
+  const pappers = lead.enrichmentData?.pappers as Record<string, unknown> | undefined;
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+        <SheetHeader className="space-y-2">
+          <SheetTitle className="text-lg">{leadName(lead)}</SheetTitle>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className="capitalize">
+              {lead.status}
+            </Badge>
+            <Badge variant="secondary" className="capitalize">
+              {lead.source}
+            </Badge>
+            {lead.score > 0 && (
+              <Badge variant="outline" className="gap-1">
+                <Star className="size-3" />
+                {lead.score}/100
+              </Badge>
+            )}
+          </div>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-5">
+          <section className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Contact
+            </h3>
+            {lead.company && (
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="size-4 shrink-0 text-muted-foreground" />
+                <span>{lead.company}</span>
+              </div>
+            )}
+            {lead.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="size-4 shrink-0 text-muted-foreground" />
+                <a href={`mailto:${lead.email}`} className="text-primary hover:underline">
+                  {lead.email}
+                </a>
+              </div>
+            )}
+            {lead.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="size-4 shrink-0 text-muted-foreground" />
+                <a href={`tel:${lead.phone}`} className="hover:underline">
+                  {lead.phone}
+                </a>
+              </div>
+            )}
+            {lead.lastContactedAt && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="size-4 shrink-0" />
+                Dernier contact :{" "}
+                {format(new Date(lead.lastContactedAt), "d MMM yyyy", { locale: fr })}
+              </div>
+            )}
+            {!lead.company && !lead.email && !lead.phone && (
+              <p className="text-sm text-muted-foreground">Aucune information de contact</p>
+            )}
+          </section>
+
+          {(lead.category || lead.sector) && (
+            <>
+              <Separator />
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Classification
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {lead.category && <Badge variant="secondary">{lead.category}</Badge>}
+                  {lead.sector && <Badge variant="outline">{lead.sector}</Badge>}
+                </div>
+              </section>
+            </>
+          )}
+
+          {pappers && (
+            <>
+              <Separator />
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Données Pappers
+                </h3>
+                <dl className="space-y-1.5 text-sm">
+                  {[
+                    ["SIREN", pappers.siren],
+                    ["Forme juridique", pappers.forme_juridique],
+                    ["Code NAF", pappers.code_naf],
+                    ["Activité", pappers.libelle_code_naf],
+                    ["Effectif", pappers.effectif],
+                    ["Chiffre d'affaires", pappers.chiffre_affaires],
+                  ]
+                    .filter(([, v]) => v)
+                    .map(([label, value]) => (
+                      <div key={String(label)} className="flex justify-between gap-4">
+                        <dt className="shrink-0 text-muted-foreground">{String(label)}</dt>
+                        <dd className="text-right font-medium">{String(value)}</dd>
+                      </div>
+                    ))}
+                  {pappers.capital_social != null && (
+                    <div className="flex justify-between gap-4">
+                      <dt className="shrink-0 text-muted-foreground">Capital social</dt>
+                      <dd className="text-right font-medium">
+                        {Number(pappers.capital_social).toLocaleString("fr-FR")} €
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+            </>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}

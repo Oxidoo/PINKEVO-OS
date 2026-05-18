@@ -59,6 +59,8 @@ export const leads = pgTable("leads", {
   email: text("email"),
   phone: text("phone"),
   company: text("company"),
+  category: text("category"),
+  sector: text("sector"),
   source: leadSource("source").notNull().default("manual"),
   status: leadStatus("status").notNull().default("new"),
   score: integer("score").notNull().default(0),
