@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { apiUsage, clients, expenses, invoices, toolSubscriptions } from "@/lib/db/schema";
@@ -10,7 +11,7 @@ function monthsAgo(n: number) {
   return d;
 }
 
-export async function getRevenueOverview() {
+async function _getRevenueOverview() {
   const [mrrRow] = await db
     .select({ mrr: sql<string>`coalesce(sum(${clients.mrr}), 0)` })
     .from(clients)
@@ -36,7 +37,12 @@ export async function getRevenueOverview() {
   };
 }
 
-export async function getCostsOverview() {
+export const getRevenueOverview = unstable_cache(_getRevenueOverview, ["finance-revenue"], {
+  revalidate: 120,
+  tags: ["finance"],
+});
+
+async function _getCostsOverview() {
   const tools = await db
     .select()
     .from(toolSubscriptions)
@@ -65,8 +71,13 @@ export async function getCostsOverview() {
   };
 }
 
+export const getCostsOverview = unstable_cache(_getCostsOverview, ["finance-costs"], {
+  revalidate: 120,
+  tags: ["finance"],
+});
+
 /** 12-month revenue (paid invoices) vs cost (expenses + api usage) series. */
-export async function getMarginSeries() {
+async function _getMarginSeries() {
   const since = monthsAgo(11);
 
   const [revenue, expense, api] = await Promise.all([
@@ -112,3 +123,8 @@ export async function getMarginSeries() {
   }
   return series;
 }
+
+export const getMarginSeries = unstable_cache(_getMarginSeries, ["finance-margin"], {
+  revalidate: 120,
+  tags: ["finance"],
+});

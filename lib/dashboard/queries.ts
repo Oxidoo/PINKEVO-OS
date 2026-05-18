@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import {
@@ -17,7 +18,7 @@ function monthStart() {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-export async function getDashboardData() {
+async function _getDashboardData() {
   const ms = monthStart();
 
   const [
@@ -133,3 +134,8 @@ export async function getDashboardData() {
     wins,
   };
 }
+
+export const getDashboardData = unstable_cache(_getDashboardData, ["dashboard-data"], {
+  revalidate: 60,
+  tags: ["dashboard"],
+});

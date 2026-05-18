@@ -1,7 +1,7 @@
 "use server";
 
 import { desc, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { activities, clients, contacts, deals } from "@/lib/db/schema";
@@ -30,6 +30,7 @@ export async function createClient(formData: FormData): Promise<ActionResult> {
     })
     .returning({ id: clients.id });
   revalidatePath("/clients");
+  revalidateTag("dashboard");
   return { ok: true, id: row?.id };
 }
 
