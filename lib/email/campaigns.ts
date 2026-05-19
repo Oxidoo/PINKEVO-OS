@@ -70,6 +70,29 @@ export async function createEmailTemplate(formData: FormData): Promise<ActionRes
   return { ok: true };
 }
 
+export async function updateEmailTemplate(id: string, formData: FormData): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  const parsed = templateSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides" };
+  }
+  const { name, subject, body, category } = parsed.data;
+
+  const variableRegex = /\{\{[^}]+\}\}/gi;
+  const usedVars = Array.from(new Set([
+    ...(subject.match(variableRegex) ?? []),
+    ...(body.match(variableRegex) ?? []),
+  ]));
+
+  await db
+    .update(emailTemplates)
+    .set({ name, subject, bodyHtml: body, bodyText: body, category, variables: usedVars })
+    .where(eq(emailTemplates.id, id));
+
+  revalidatePath("/campaigns");
+  return { ok: true };
+}
+
 export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager", "sales"]);
   await db.delete(emailTemplates).where(eq(emailTemplates.id, id));

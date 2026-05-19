@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Link as LinkIcon, Plus } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,10 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkText, setLinkText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+
   function handleTemplateSelect(templateId: string) {
     if (templateId === "none") {
       return;
@@ -86,6 +90,14 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
     }
   }
 
+  function insertLink() {
+    if (!linkText || !linkUrl) return;
+    insertVariable(`[${linkText}](${linkUrl})`);
+    setLinkText("");
+    setLinkUrl("");
+    setShowLinkForm(false);
+  }
+
   function onSubmit(formData: FormData) {
     formData.set("subject", subject);
     formData.set("message", body);
@@ -101,6 +113,7 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
         setCategory("");
         setSector("");
         setActiveField("body");
+        setShowLinkForm(false);
       } else {
         toast.error(res.error);
       }
@@ -179,7 +192,7 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
             <p className="text-xs text-muted-foreground">
               Cliquez sur une variable pour l&apos;insérer dans le champ actif :
             </p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {VARIABLES.map((v) => (
                 <Badge
                   key={v}
@@ -190,7 +203,45 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
                   {v}
                 </Badge>
               ))}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowLinkForm((p) => !p)}
+              >
+                <LinkIcon className="mr-1 size-3" />
+                Insérer un lien
+              </Button>
             </div>
+
+            {showLinkForm && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <Input
+                  placeholder="Texte du lien"
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                />
+                <Input
+                  placeholder="https://..."
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  type="url"
+                />
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" onClick={insertLink}>
+                    Insérer
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowLinkForm(false)}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

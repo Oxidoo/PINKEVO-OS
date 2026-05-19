@@ -15,9 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/server";
 import { getCampaigns, getEmailMessages, getEmailTemplates } from "@/lib/email/campaigns";
 import { CampaignCreateDialog } from "./campaign-create-dialog";
+import { MessagesTable } from "./messages-table";
 import { SendButton } from "./send-button";
 import { TemplateCreateDialog } from "./template-create-dialog";
 import { TemplateDeleteButton } from "./template-delete-button";
+import { TemplateEditDialog } from "./template-edit-dialog";
 
 export const metadata = { title: "Communication" };
 
@@ -109,34 +111,7 @@ export default async function CampaignsPage() {
               Aucun email envoyé pour l&apos;instant.
             </div>
           ) : (
-            <div className="rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Destinataire</TableHead>
-                    <TableHead>Objet</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Ouvert</TableHead>
-                    <TableHead className="hidden md:table-cell">Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {messages.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">{m.toEmail}</TableCell>
-                      <TableCell className="text-muted-foreground">{m.subject}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{m.status}</Badge>
-                      </TableCell>
-                      <TableCell>{m.openedAt ? "✓" : "—"}</TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {format(m.createdAt, "d MMM HH:mm", { locale: fr })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <MessagesTable messages={messages} />
           )}
         </TabsContent>
 
