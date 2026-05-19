@@ -19,9 +19,8 @@ const sql =
 
 export const db = globalThis.__pinkevoDb ?? drizzle(sql, { schema, casing: "snake_case" });
 
-if (env.NODE_ENV !== "production") {
-  globalThis.__pinkevoSql = sql;
-  globalThis.__pinkevoDb = db;
-}
+// Cache connection globally so warm serverless invocations reuse it.
+globalThis.__pinkevoSql ??= sql;
+globalThis.__pinkevoDb ??= db;
 
 export type Db = typeof db;

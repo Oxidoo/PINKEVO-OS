@@ -13,18 +13,32 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createLead } from "@/lib/crm/leads";
+import { LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
 
 export function LeadCreateDialog() {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("");
+  const [sector, setSector] = useState("");
   const [pending, start] = useTransition();
 
   function onSubmit(formData: FormData) {
+    if (category) formData.set("category", category);
+    if (sector) formData.set("sector", sector);
     start(async () => {
       const res = await createLead(formData);
       if (res.ok) {
         toast.success("Lead créé");
         setOpen(false);
+        setCategory("");
+        setSector("");
       } else {
         toast.error(res.error);
       }
@@ -38,7 +52,7 @@ export function LeadCreateDialog() {
           <Plus className="mr-1 size-4" /> Nouveau lead
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Nouveau lead</DialogTitle>
         </DialogHeader>
@@ -63,6 +77,39 @@ export function LeadCreateDialog() {
             <Label htmlFor="company">Société</Label>
             <Input id="company" name="company" />
           </div>
+
+          <div className="space-y-1.5">
+            <Label>Catégorie</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner…" />
+              </SelectTrigger>
+              <SelectContent>
+                {LEAD_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Secteur</Label>
+            <Select value={sector} onValueChange={setSector}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner…" />
+              </SelectTrigger>
+              <SelectContent>
+                {LEAD_SECTORS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="sm:col-span-2">
             <Button type="submit" disabled={pending} className="w-full">
               {pending ? "Création…" : "Créer le lead"}

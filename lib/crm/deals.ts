@@ -3,14 +3,15 @@
 import { desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth/server";
+import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { deals } from "@/lib/db/schema";
 import type { ActionResult } from "./clients";
 import { dealInput, dealStageValues, STAGE_PROBABILITY } from "./validation";
 
 export async function getDeals() {
-  return db.select().from(deals).orderBy(desc(deals.createdAt));
+  await requireUser();
+  return db.select().from(deals).orderBy(desc(deals.createdAt)).limit(500);
 }
 
 export async function createDeal(formData: FormData): Promise<ActionResult> {

@@ -1,9 +1,9 @@
 "use server";
 
 import { desc, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth/server";
+import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { clients, leads } from "@/lib/db/schema";
 import { searchCompany } from "@/lib/integrations/pappers/client";
@@ -11,7 +11,8 @@ import type { ActionResult } from "./clients";
 import { leadInput, leadStatusValues } from "./validation";
 
 export async function getLeads() {
-  return db.select().from(leads).orderBy(desc(leads.createdAt));
+  await requireUser();
+  return db.select().from(leads).orderBy(desc(leads.createdAt)).limit(500);
 }
 
 export async function createLead(formData: FormData): Promise<ActionResult> {
@@ -26,6 +27,7 @@ export async function createLead(formData: FormData): Promise<ActionResult> {
     .values({ ...rest, email: email || null, assignedTo: profile.id })
     .returning({ id: leads.id });
   revalidatePath("/leads");
+  revalidateTag("dashboard");
   return { ok: true, id: row?.id };
 }
 

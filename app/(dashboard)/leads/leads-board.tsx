@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { convertLeadToClient, enrichLead, updateLeadStatus } from "@/lib/crm/leads";
 import type { Lead } from "@/lib/db/schema";
+import { LeadSheet } from "./lead-sheet";
+import { DEFAULT_FILTERS, LeadsFilterBar, type LeadFilters } from "./leads-filters";
 
 const COLUMNS = [
   { id: "new", label: "Nouveau" },
@@ -31,7 +33,39 @@ function leadName(lead: Lead) {
   return n || lead.company || lead.email || "Lead sans nom";
 }
 
-function LeadCard({ lead }: { lead: Lead }) {
+function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
+  let out = leads;
+
+  if (filters.query) {
+    const q = filters.query.toLowerCase();
+    out = out.filter(
+      (l) =>
+        leadName(l).toLowerCase().includes(q) ||
+        l.company?.toLowerCase().includes(q) ||
+        l.email?.toLowerCase().includes(q),
+    );
+  }
+  if (filters.category !== "all") {
+    out = out.filter((l) => l.category === filters.category);
+  }
+  if (filters.sector !== "all") {
+    out = out.filter((l) => l.sector === filters.sector);
+  }
+  if (filters.sort === "score") {
+    out = [...out].sort((a, b) => b.score - a.score);
+  } else if (filters.sort === "name") {
+    out = [...out].sort((a, b) => leadName(a).localeCompare(leadName(b), "fr"));
+  }
+  return out;
+}
+
+function LeadCard({
+  lead,
+  onOpen,
+}: {
+  lead: Lead;
+  onOpen: (lead: Lead) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
   });
@@ -52,7 +86,8 @@ function LeadCard({ lead }: { lead: Lead }) {
       <div className="flex items-start justify-between gap-2">
         <button
           type="button"
-          className="cursor-grab text-left font-medium"
+          className="cursor-grab text-left font-medium hover:text-primary"
+          onClick={() => onOpen(lead)}
           {...listeners}
           {...attributes}
         >
@@ -70,7 +105,21 @@ function LeadCard({ lead }: { lead: Lead }) {
       {lead.score > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">Score : {lead.score}/100</p>
       )}
-      <div className="mt-2 flex gap-1">
+      {(lead.category || lead.sector) && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {lead.category && (
+            <Badge variant="secondary" className="text-[10px]">
+              {lead.category}
+            </Badge>
+          )}
+          {lead.sector && (
+            <Badge variant="outline" className="text-[10px]">
+              {lead.sector}
+            </Badge>
+          )}
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap gap-1">
         <Button
           size="sm"
           variant="ghost"
@@ -106,10 +155,20 @@ function LeadCard({ lead }: { lead: Lead }) {
   );
 }
 
-function Column({ id, label, leads }: { id: string; label: string; leads: Lead[] }) {
+function Column({
+  id,
+  label,
+  leads,
+  onOpen,
+}: {
+  id: string;
+  label: string;
+  leads: Lead[];
+  onOpen: (lead: Lead) => void;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className="flex min-w-0 flex-col">
       <div className="mb-2 flex items-center justify-between px-1">
         <span className="text-sm font-medium">{label}</span>
         <Badge variant="secondary">{leads.length}</Badge>
@@ -121,7 +180,7 @@ function Column({ id, label, leads }: { id: string; label: string; leads: Lead[]
         }`}
       >
         {leads.map((l) => (
-          <LeadCard key={l.id} lead={l} />
+          <LeadCard key={l.id} lead={l} onOpen={onOpen} />
         ))}
       </div>
     </div>
@@ -131,7 +190,11 @@ function Column({ id, label, leads }: { id: string; label: string; leads: Lead[]
 export function LeadsBoard({ leads }: { leads: Lead[] }) {
   const [items, setItems] = useState(leads);
   const [optimistic, setOptimistic] = useOptimistic(items);
+  const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const filtered = applyFilters(optimistic, filters);
 
   function onDragEnd(e: DragEndEvent) {
     const leadId = String(e.active.id);
@@ -152,17 +215,28 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {COLUMNS.map((col) => (
-          <Column
-            key={col.id}
-            id={col.id}
-            label={col.label}
-            leads={optimistic.filter((l) => l.status === col.id)}
-          />
-        ))}
-      </div>
-    </DndContext>
+    <>
+      <LeadsFilterBar filters={filters} onChange={setFilters} />
+
+      <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <div className="grid grid-cols-2 gap-3 pb-4 sm:grid-cols-3 xl:grid-cols-6">
+          {COLUMNS.map((col) => (
+            <Column
+              key={col.id}
+              id={col.id}
+              label={col.label}
+              leads={filtered.filter((l) => l.status === col.id)}
+              onOpen={setSelectedLead}
+            />
+          ))}
+        </div>
+      </DndContext>
+
+      <LeadSheet
+        lead={selectedLead}
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+      />
+    </>
   );
 }

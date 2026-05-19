@@ -65,6 +65,8 @@ export const leadInput = z.object({
   email: z.string().email("Email invalide").optional().or(z.literal("")),
   phone: optionalText,
   company: optionalText,
+  category: optionalText,
+  sector: optionalText,
   source: z.enum(leadSourceValues).default("manual"),
   status: z.enum(leadStatusValues).default("new"),
 });
