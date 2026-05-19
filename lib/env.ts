@@ -18,7 +18,8 @@ export const env = createEnv({
 
     // Email
     RESEND_API_KEY: z.string().optional(),
-    RESEND_FROM_EMAIL: z.string().email().optional(),
+    // Accepts either a bare address or "Name <email@domain>" (Resend format)
+    RESEND_FROM_EMAIL: z.string().min(1).optional(),
 
     // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
