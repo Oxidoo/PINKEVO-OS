@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,7 +116,14 @@ export default async function CampaignsPage() {
                             {c.status === "scheduled" && scheduledAt ? (
                               <Button size="sm" variant="secondary" disabled>
                                 Envoi auto ·{" "}
-                                {format(scheduledAt, "dd/MM/yyyy HH:mm", { locale: fr })}
+                                {new Intl.DateTimeFormat("fr-FR", {
+                                  timeZone: "Europe/Paris",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }).format(scheduledAt)}
                               </Button>
                             ) : (
                               <SendButton id={c.id} disabled={c.status === "sent"} />

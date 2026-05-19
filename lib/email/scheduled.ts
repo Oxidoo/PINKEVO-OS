@@ -61,14 +61,12 @@ export async function executeCampaignSend(
   let sent = 0;
   for (const lead of recipients) {
     if (!lead.email) continue;
-    const name = `${lead.firstName ?? ""}`.trim() || lead.company || "bonjour";
     const res = await sendEmail({
       to: lead.email,
       subject: interpolate(subject, lead),
       campaignId: id,
       leadId: lead.id,
       react: FollowUpEmail({
-        contactName: name,
         message: interpolate(message, lead),
         signature,
       }),
