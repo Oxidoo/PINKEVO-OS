@@ -1,4 +1,4 @@
-import { Body, Container, Head, Html, Link, Preview, Text } from "@react-email/components";
+import { Body, Container, Head, Html, Link, Text } from "@react-email/components";
 
 const s = {
   body: {
@@ -8,7 +8,6 @@ const s = {
     padding: "24px 0",
   },
   container: { maxWidth: 560, margin: "0 auto", padding: "0 24px" },
-  greeting: { color: "#0f172a", fontSize: 15, lineHeight: "24px", margin: "0 0 16px" },
   text: { color: "#0f172a", fontSize: 15, lineHeight: "24px", margin: "0 0 12px" },
   signature: {
     color: "#64748b",
@@ -38,12 +37,11 @@ function parseSegments(
 }
 
 export interface FollowUpEmailProps {
-  contactName: string;
   message: string;
   signature?: string;
 }
 
-export function FollowUpEmail({ contactName, message, signature }: FollowUpEmailProps) {
+export function FollowUpEmail({ message, signature }: FollowUpEmailProps) {
   const lines = message.split("\n").filter((l) => l.trim() !== "");
   const sigLines = (signature ?? "L'équipe Agence PINKEVO")
     .split("\n")
@@ -52,11 +50,8 @@ export function FollowUpEmail({ contactName, message, signature }: FollowUpEmail
   return (
     <Html>
       <Head />
-      <Preview>On reprend contact</Preview>
       <Body style={s.body}>
         <Container style={s.container}>
-          <Text style={s.greeting}>Bonjour {contactName},</Text>
-
           {lines.map((line, i) => {
             const segments = parseSegments(line);
             return (
