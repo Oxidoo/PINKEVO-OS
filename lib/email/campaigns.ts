@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
@@ -249,13 +249,16 @@ async function executeCampaignSend(
     .update(emailCampaigns)
     .set({ status: "sent", sentCount: sent })
     .where(eq(emailCampaigns.id, id));
-  revalidatePath("/campaigns");
+  // revalidatePath only works inside a request context (Next.js server actions).
+  // Caller is responsible for calling it when appropriate.
   return { ok: true, id: String(sent) };
 }
 
 export async function sendCampaign(id: string): Promise<ActionResult> {
   const sender = await requireRole(["owner", "admin", "manager", "sales"]);
-  return executeCampaignSend(id, sender.emailSignature);
+  const result = await executeCampaignSend(id, sender.emailSignature);
+  revalidatePath("/campaigns");
+  return result;
 }
 
 /** Cron entrypoint: send every scheduled campaign whose time has come. */
@@ -266,7 +269,6 @@ export async function runScheduledCampaigns(): Promise<{ sent: number }> {
     .where(
       and(
         eq(emailCampaigns.status, "scheduled"),
-        isNull(emailCampaigns.archivedAt),
         isNotNull(emailCampaigns.scheduledAt),
         lte(emailCampaigns.scheduledAt, new Date()),
       ),
