@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/client";
-import { emailMessages } from "@/lib/db/schema";
+import { emailCampaigns, emailMessages } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
 
 /**
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       break;
     case "email.opened":
       patch.openedAt = now;
+      patch.status = "delivered";
       break;
     case "email.clicked":
       patch.clickedAt = now;
@@ -48,7 +49,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
   }
 
-  await db.update(emailMessages).set(patch).where(eq(emailMessages.resendId, emailId));
+  const [updated] = await db
+    .update(emailMessages)
+    .set(patch)
+    .where(eq(emailMessages.resendId, emailId))
+    .returning({ campaignId: emailMessages.campaignId });
+
+  if (payload.type === "email.opened" && updated?.campaignId) {
+    await db
+      .update(emailCampaigns)
+      .set({ openCount: sql`${emailCampaigns.openCount} + 1` })
+      .where(eq(emailCampaigns.id, updated.campaignId));
+  }
+
   logger.info({ type: payload.type, emailId }, "resend webhook processed");
   return NextResponse.json({ received: true });
 }

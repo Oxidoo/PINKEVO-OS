@@ -12,6 +12,7 @@ import { requireRole, requireUser } from "./server";
 const profileSchema = z.object({
   fullName: z.string().min(1).max(120),
   telegramChatId: z.string().max(64).optional().or(z.literal("")),
+  emailSignature: z.string().max(1000).optional().or(z.literal("")),
 });
 
 export type SimpleState = { error?: string; ok?: boolean } | undefined;
@@ -24,6 +25,7 @@ export async function updateMyProfile(
   const parsed = profileSchema.safeParse({
     fullName: formData.get("fullName"),
     telegramChatId: formData.get("telegramChatId") ?? "",
+    emailSignature: formData.get("emailSignature") ?? "",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Données invalides" };
@@ -34,6 +36,7 @@ export async function updateMyProfile(
     .set({
       fullName: parsed.data.fullName,
       telegramChatId: parsed.data.telegramChatId || null,
+      emailSignature: parsed.data.emailSignature || null,
     })
     .where(eq(profiles.id, user.id));
 

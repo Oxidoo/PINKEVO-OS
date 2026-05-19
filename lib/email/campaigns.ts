@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
@@ -11,7 +11,39 @@ import { sendEmail } from "@/lib/integrations/resend/client";
 import { FollowUpEmail } from "./templates/follow-up";
 
 export async function getCampaigns() {
-  return db.select().from(emailCampaigns).orderBy(desc(emailCampaigns.createdAt));
+  return db
+    .select()
+    .from(emailCampaigns)
+    .where(isNull(emailCampaigns.archivedAt))
+    .orderBy(desc(emailCampaigns.createdAt));
+}
+
+export async function getArchivedCampaigns() {
+  return db
+    .select()
+    .from(emailCampaigns)
+    .where(isNotNull(emailCampaigns.archivedAt))
+    .orderBy(desc(emailCampaigns.archivedAt));
+}
+
+export async function archiveCampaign(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  await db
+    .update(emailCampaigns)
+    .set({ archivedAt: new Date() })
+    .where(eq(emailCampaigns.id, id));
+  revalidatePath("/campaigns");
+  return { ok: true };
+}
+
+export async function unarchiveCampaign(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  await db
+    .update(emailCampaigns)
+    .set({ archivedAt: null })
+    .where(eq(emailCampaigns.id, id));
+  revalidatePath("/campaigns");
+  return { ok: true };
 }
 
 export async function getEmailMessages() {
@@ -156,7 +188,7 @@ function interpolate(text: string, lead: {
 }
 
 export async function sendCampaign(id: string): Promise<ActionResult> {
-  await requireRole(["owner", "admin", "manager", "sales"]);
+  const sender = await requireRole(["owner", "admin", "manager", "sales"]);
   const [campaign] = await db
     .select()
     .from(emailCampaigns)
@@ -194,7 +226,11 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
       subject: interpolatedSubject,
       campaignId: id,
       leadId: lead.id,
-      react: FollowUpEmail({ contactName: name, message: interpolatedMessage }),
+      react: FollowUpEmail({
+        contactName: name,
+        message: interpolatedMessage,
+        signature: sender.emailSignature ?? undefined,
+      }),
     });
     if (res.ok) sent += 1;
   }

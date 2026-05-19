@@ -40,10 +40,14 @@ function parseSegments(
 export interface FollowUpEmailProps {
   contactName: string;
   message: string;
+  signature?: string;
 }
 
-export function FollowUpEmail({ contactName, message }: FollowUpEmailProps) {
+export function FollowUpEmail({ contactName, message, signature }: FollowUpEmailProps) {
   const lines = message.split("\n").filter((l) => l.trim() !== "");
+  const sigLines = (signature ?? "L'équipe Agence PINKEVO")
+    .split("\n")
+    .filter((l) => l.trim() !== "");
 
   return (
     <Html>
@@ -71,7 +75,14 @@ export function FollowUpEmail({ contactName, message }: FollowUpEmailProps) {
           })}
 
           <Text style={s.text}>Cordialement,</Text>
-          <Text style={s.signature}>L&apos;équipe Agence PINKEVO</Text>
+          <Text style={s.signature}>
+            {sigLines.map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < sigLines.length - 1 && <br />}
+              </span>
+            ))}
+          </Text>
         </Container>
       </Body>
     </Html>

@@ -13,7 +13,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/server";
-import { getCampaigns, getEmailMessages, getEmailTemplates } from "@/lib/email/campaigns";
+import {
+  getArchivedCampaigns,
+  getCampaigns,
+  getEmailMessages,
+  getEmailTemplates,
+} from "@/lib/email/campaigns";
+import { ArchiveButton, UnarchiveButton } from "./archive-button";
 import { CampaignCreateDialog } from "./campaign-create-dialog";
 import { MessagesTable } from "./messages-table";
 import { SendButton } from "./send-button";
@@ -41,8 +47,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default async function CampaignsPage() {
   await requireUser();
-  const [campaigns, messages, templates] = await Promise.all([
+  const [campaigns, archivedCampaigns, messages, templates] = await Promise.all([
     getCampaigns(),
+    getArchivedCampaigns(),
     getEmailMessages(),
     getEmailTemplates(),
   ]);
@@ -68,7 +75,7 @@ export default async function CampaignsPage() {
           <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="campaigns" className="mt-6">
+        <TabsContent value="campaigns" className="mt-6 space-y-6">
           {campaigns.length === 0 ? (
             <div className="rounded-xl border border-dashed py-16 text-center text-sm text-muted-foreground">
               Aucune campagne. Créez-en une pour démarrer une séquence email.
@@ -95,13 +102,46 @@ export default async function CampaignsPage() {
                       <TableCell className="text-right tabular-nums">{c.sentCount}</TableCell>
                       <TableCell className="text-right tabular-nums">{c.openCount}</TableCell>
                       <TableCell className="text-right">
-                        <SendButton id={c.id} disabled={c.status === "sent"} />
+                        <div className="flex items-center justify-end gap-1">
+                          <SendButton id={c.id} disabled={c.status === "sent"} />
+                          <ArchiveButton id={c.id} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
+          )}
+
+          {archivedCampaigns.length > 0 && (
+            <details className="group">
+              <summary className="cursor-pointer list-none">
+                <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+                  <span className="transition-transform group-open:rotate-90">▶</span>
+                  Archivées ({archivedCampaigns.length})
+                </span>
+              </summary>
+              <div className="mt-3 rounded-xl border">
+                <Table>
+                  <TableBody>
+                    {archivedCampaigns.map((c) => (
+                      <TableRow key={c.id} className="opacity-60">
+                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{c.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{c.sentCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">{c.openCount}</TableCell>
+                        <TableCell className="text-right">
+                          <UnarchiveButton id={c.id} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </details>
           )}
         </TabsContent>
 
