@@ -1,14 +1,13 @@
 "use server";
 
-import { and, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
 import type { ActionResult } from "@/lib/crm/clients";
 import { db } from "@/lib/db/client";
-import { emailCampaigns, emailMessages, emailTemplates, leads } from "@/lib/db/schema";
-import { sendEmail } from "@/lib/integrations/resend/client";
-import { FollowUpEmail } from "./templates/follow-up";
+import { emailCampaigns, emailMessages, emailTemplates } from "@/lib/db/schema";
+import { executeCampaignSend } from "./scheduled";
 
 export async function getCampaigns() {
   return db
@@ -179,81 +178,6 @@ export async function createCampaign(formData: FormData): Promise<ActionResult> 
   return { ok: true, id: row?.id };
 }
 
-function interpolate(text: string, lead: {
-  firstName?: string | null;
-  lastName?: string | null;
-  company?: string | null;
-  email?: string | null;
-  category?: string | null;
-  sector?: string | null;
-}): string {
-  return text
-    .replace(/\{\{prénom\}\}/gi, lead.firstName ?? "")
-    .replace(/\{\{nom\}\}/gi, lead.lastName ?? "")
-    .replace(/\{\{société\}\}/gi, lead.company ?? "")
-    .replace(/\{\{email\}\}/gi, lead.email ?? "")
-    .replace(/\{\{catégorie\}\}/gi, lead.category ?? "")
-    .replace(/\{\{secteur\}\}/gi, lead.sector ?? "");
-}
-
-/** Core send logic — no auth. Used by the manual action and the scheduled cron. */
-async function executeCampaignSend(
-  id: string,
-  liveSignature?: string | null,
-): Promise<ActionResult> {
-  const [campaign] = await db
-    .select()
-    .from(emailCampaigns)
-    .where(eq(emailCampaigns.id, id))
-    .limit(1);
-  if (!campaign) return { ok: false, error: "Campagne introuvable" };
-
-  const filter = (campaign.audienceFilter ?? {}) as {
-    subject?: string;
-    message?: string;
-    category?: string;
-    sector?: string;
-    signature?: string;
-  };
-  const subject = filter.subject ?? campaign.name;
-  const message = filter.message ?? "";
-  const signature = liveSignature ?? filter.signature ?? undefined;
-
-  const conditions = [isNotNull(leads.email)];
-  if (filter.category) conditions.push(eq(leads.category, filter.category));
-  if (filter.sector) conditions.push(eq(leads.sector, filter.sector));
-
-  const recipients = await db.select().from(leads).where(and(...conditions));
-
-  await db.update(emailCampaigns).set({ status: "sending" }).where(eq(emailCampaigns.id, id));
-
-  let sent = 0;
-  for (const lead of recipients) {
-    if (!lead.email) continue;
-    const name = `${lead.firstName ?? ""}`.trim() || lead.company || "bonjour";
-    const res = await sendEmail({
-      to: lead.email,
-      subject: interpolate(subject, lead),
-      campaignId: id,
-      leadId: lead.id,
-      react: FollowUpEmail({
-        contactName: name,
-        message: interpolate(message, lead),
-        signature,
-      }),
-    });
-    if (res.ok) sent += 1;
-  }
-
-  await db
-    .update(emailCampaigns)
-    .set({ status: "sent", sentCount: sent })
-    .where(eq(emailCampaigns.id, id));
-  // revalidatePath only works inside a request context (Next.js server actions).
-  // Caller is responsible for calling it when appropriate.
-  return { ok: true, id: String(sent) };
-}
-
 export async function sendCampaign(id: string): Promise<ActionResult> {
   const sender = await requireRole(["owner", "admin", "manager", "sales"]);
   const result = await executeCampaignSend(id, sender.emailSignature);
@@ -261,23 +185,3 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
   return result;
 }
 
-/** Cron entrypoint: send every scheduled campaign whose time has come. */
-export async function runScheduledCampaigns(): Promise<{ sent: number }> {
-  const due = await db
-    .select({ id: emailCampaigns.id })
-    .from(emailCampaigns)
-    .where(
-      and(
-        eq(emailCampaigns.status, "scheduled"),
-        isNotNull(emailCampaigns.scheduledAt),
-        lte(emailCampaigns.scheduledAt, new Date()),
-      ),
-    );
-
-  let count = 0;
-  for (const c of due) {
-    const res = await executeCampaignSend(c.id);
-    if (res.ok) count += 1;
-  }
-  return { sent: count };
-}

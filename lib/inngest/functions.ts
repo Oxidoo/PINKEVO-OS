@@ -74,7 +74,7 @@ export const dailyReport = inngest.createFunction(
 export const scheduledCampaigns = inngest.createFunction(
   { id: "scheduled-campaigns", triggers: [{ cron: "* * * * *" }] },
   async () => {
-    const { runScheduledCampaigns } = await import("@/lib/email/campaigns");
+    const { runScheduledCampaigns } = await import("@/lib/email/scheduled");
     return runScheduledCampaigns();
   },
 );
