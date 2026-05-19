@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
 import type { ActionResult } from "@/lib/crm/clients";
@@ -27,7 +27,6 @@ export async function addExpense(formData: FormData): Promise<ActionResult> {
     amount: String(parsed.data.amount),
   });
   revalidatePath("/finance");
-  revalidateTag("finance");
   return { ok: true };
 }
 
@@ -51,6 +50,5 @@ export async function addToolSubscription(formData: FormData): Promise<ActionRes
     seats: parsed.data.seats ?? null,
   });
   revalidatePath("/finance");
-  revalidateTag("finance");
   return { ok: true };
 }

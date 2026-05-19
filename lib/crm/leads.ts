@@ -1,7 +1,7 @@
 "use server";
 
 import { desc, eq } from "drizzle-orm";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
@@ -27,7 +27,6 @@ export async function createLead(formData: FormData): Promise<ActionResult> {
     .values({ ...rest, email: email || null, assignedTo: profile.id })
     .returning({ id: leads.id });
   revalidatePath("/leads");
-  revalidateTag("dashboard");
   return { ok: true, id: row?.id };
 }
 
