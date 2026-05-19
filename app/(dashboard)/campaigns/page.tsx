@@ -151,7 +151,10 @@ export default async function CampaignsPage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{t.subject}</TableCell>
                       <TableCell className="text-right">
-                        <TemplateDeleteButton id={t.id} />
+                        <div className="flex items-center justify-end gap-1">
+                          <TemplateEditDialog template={t} />
+                          <TemplateDeleteButton id={t.id} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
