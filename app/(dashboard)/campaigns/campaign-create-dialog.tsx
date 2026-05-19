@@ -103,6 +103,14 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
     formData.set("message", body);
     if (category) formData.set("category", category);
     if (sector) formData.set("sector", sector);
+    // datetime-local is timezone-naive. Convert it to an absolute UTC ISO
+    // string here (the browser knows the user's real timezone) so the server
+    // doesn't misread it as UTC.
+    const rawSchedule = formData.get("scheduledAt");
+    if (typeof rawSchedule === "string" && rawSchedule.trim() !== "") {
+      const d = new Date(rawSchedule);
+      if (!Number.isNaN(d.getTime())) formData.set("scheduledAt", d.toISOString());
+    }
     start(async () => {
       const res = await createCampaign(formData);
       if (res.ok) {
