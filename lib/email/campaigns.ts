@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole } from "@/lib/auth/server";
@@ -42,6 +42,13 @@ export async function unarchiveCampaign(id: string): Promise<ActionResult> {
     .update(emailCampaigns)
     .set({ archivedAt: null })
     .where(eq(emailCampaigns.id, id));
+  revalidatePath("/campaigns");
+  return { ok: true };
+}
+
+export async function deleteCampaign(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager"]);
+  await db.delete(emailCampaigns).where(eq(emailCampaigns.id, id));
   revalidatePath("/campaigns");
   return { ok: true };
 }
@@ -143,7 +150,7 @@ const campaignSchema = z.object({
 });
 
 export async function createCampaign(formData: FormData): Promise<ActionResult> {
-  await requireRole(["owner", "admin", "manager", "sales"]);
+  const creator = await requireRole(["owner", "admin", "manager", "sales"]);
   const parsed = campaignSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides" };
@@ -155,6 +162,8 @@ export async function createCampaign(formData: FormData): Promise<ActionResult> 
   };
   if (parsed.data.category) audienceFilter.category = parsed.data.category;
   if (parsed.data.sector) audienceFilter.sector = parsed.data.sector;
+  // Snapshot the creator's signature so scheduled sends (no logged-in user) keep it.
+  if (creator.emailSignature) audienceFilter.signature = creator.emailSignature;
 
   const [row] = await db
     .insert(emailCampaigns)
@@ -187,8 +196,11 @@ function interpolate(text: string, lead: {
     .replace(/\{\{secteur\}\}/gi, lead.sector ?? "");
 }
 
-export async function sendCampaign(id: string): Promise<ActionResult> {
-  const sender = await requireRole(["owner", "admin", "manager", "sales"]);
+/** Core send logic — no auth. Used by the manual action and the scheduled cron. */
+async function executeCampaignSend(
+  id: string,
+  liveSignature?: string | null,
+): Promise<ActionResult> {
   const [campaign] = await db
     .select()
     .from(emailCampaigns)
@@ -201,15 +213,15 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
     message?: string;
     category?: string;
     sector?: string;
+    signature?: string;
   };
   const subject = filter.subject ?? campaign.name;
   const message = filter.message ?? "";
-  const filterCategory = filter.category;
-  const filterSector = filter.sector;
+  const signature = liveSignature ?? filter.signature ?? undefined;
 
   const conditions = [isNotNull(leads.email)];
-  if (filterCategory) conditions.push(eq(leads.category, filterCategory));
-  if (filterSector) conditions.push(eq(leads.sector, filterSector));
+  if (filter.category) conditions.push(eq(leads.category, filter.category));
+  if (filter.sector) conditions.push(eq(leads.sector, filter.sector));
 
   const recipients = await db.select().from(leads).where(and(...conditions));
 
@@ -218,18 +230,16 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
   let sent = 0;
   for (const lead of recipients) {
     if (!lead.email) continue;
-    const interpolatedSubject = interpolate(subject, lead);
-    const interpolatedMessage = interpolate(message, lead);
     const name = `${lead.firstName ?? ""}`.trim() || lead.company || "bonjour";
     const res = await sendEmail({
       to: lead.email,
-      subject: interpolatedSubject,
+      subject: interpolate(subject, lead),
       campaignId: id,
       leadId: lead.id,
       react: FollowUpEmail({
         contactName: name,
-        message: interpolatedMessage,
-        signature: sender.emailSignature ?? undefined,
+        message: interpolate(message, lead),
+        signature,
       }),
     });
     if (res.ok) sent += 1;
@@ -241,4 +251,31 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
     .where(eq(emailCampaigns.id, id));
   revalidatePath("/campaigns");
   return { ok: true, id: String(sent) };
+}
+
+export async function sendCampaign(id: string): Promise<ActionResult> {
+  const sender = await requireRole(["owner", "admin", "manager", "sales"]);
+  return executeCampaignSend(id, sender.emailSignature);
+}
+
+/** Cron entrypoint: send every scheduled campaign whose time has come. */
+export async function runScheduledCampaigns(): Promise<{ sent: number }> {
+  const due = await db
+    .select({ id: emailCampaigns.id })
+    .from(emailCampaigns)
+    .where(
+      and(
+        eq(emailCampaigns.status, "scheduled"),
+        isNull(emailCampaigns.archivedAt),
+        isNotNull(emailCampaigns.scheduledAt),
+        lte(emailCampaigns.scheduledAt, new Date()),
+      ),
+    );
+
+  let count = 0;
+  for (const c of due) {
+    const res = await executeCampaignSend(c.id);
+    if (res.ok) count += 1;
+  }
+  return { sent: count };
 }

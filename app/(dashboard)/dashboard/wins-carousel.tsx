@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { fireConfetti } from "@/components/celebrations/confetti";
 
 interface Win {
   kind: string;
@@ -13,11 +12,6 @@ interface Win {
 
 export function WinsCarousel({ wins }: { wins: Win[] }) {
   const [idx, setIdx] = useState(0);
-
-  useEffect(() => {
-    if (wins.length === 0) return;
-    fireConfetti();
-  }, [wins.length]);
 
   useEffect(() => {
     if (wins.length <= 1) return;

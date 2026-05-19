@@ -137,8 +137,18 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
         </DialogHeader>
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="camp-name">Nom interne</Label>
-            <Input id="camp-name" name="name" required maxLength={160} />
+            <Label htmlFor="camp-name">Nom de la campagne (interne)</Label>
+            <Input
+              id="camp-name"
+              name="name"
+              required
+              maxLength={160}
+              placeholder="Ex : Relance prospects Q2"
+            />
+            <p className="text-xs text-muted-foreground">
+              Visible uniquement par vous pour ranger vos campagnes. N&apos;apparaît pas dans
+              l&apos;email.
+            </p>
           </div>
 
           {templates.length > 0 && (
@@ -171,6 +181,7 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
               onChange={(e) => setSubject(e.target.value)}
               onFocus={() => setActiveField("subject")}
               ref={subjectRef}
+              placeholder="Ce que le destinataire voit dans sa boîte mail"
             />
           </div>
 
@@ -289,8 +300,12 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="camp-scheduledAt">Programmer (optionnel)</Label>
+            <Label htmlFor="camp-scheduledAt">Programmer l&apos;envoi (optionnel)</Label>
             <Input id="camp-scheduledAt" name="scheduledAt" type="datetime-local" />
+            <p className="text-xs text-muted-foreground">
+              Si une date est renseignée, l&apos;envoi est automatique à l&apos;heure choisie
+              (vérifié toutes les 5 min). Sinon, l&apos;envoi reste manuel.
+            </p>
           </div>
 
           <Button type="submit" disabled={pending} className="w-full">
