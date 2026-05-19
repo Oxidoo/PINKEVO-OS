@@ -70,9 +70,9 @@ export const dailyReport = inngest.createFunction(
   },
 );
 
-/** Scheduled email campaigns — every 5 min, sends any campaign whose time has come. */
+/** Scheduled email campaigns — every minute, sends any campaign whose time has come. */
 export const scheduledCampaigns = inngest.createFunction(
-  { id: "scheduled-campaigns", triggers: [{ cron: "*/5 * * * *" }] },
+  { id: "scheduled-campaigns", triggers: [{ cron: "* * * * *" }] },
   async () => {
     const { runScheduledCampaigns } = await import("@/lib/email/campaigns");
     return runScheduledCampaigns();
