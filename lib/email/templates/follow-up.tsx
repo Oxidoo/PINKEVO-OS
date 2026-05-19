@@ -30,7 +30,7 @@ function parseSegments(
   let m: RegExpExecArray | null;
   while ((m = linkRe.exec(text)) !== null) {
     if (m.index > last) segments.push({ type: "text", content: text.slice(last, m.index) });
-    segments.push({ type: "link", content: m[1], href: m[2] });
+    segments.push({ type: "link", content: m[1] ?? "", href: m[2] ?? "" });
     last = m.index + m[0].length;
   }
   if (last < text.length) segments.push({ type: "text", content: text.slice(last) });
