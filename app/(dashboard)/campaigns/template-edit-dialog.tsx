@@ -1,6 +1,6 @@
 "use client";
 
-import { Link as LinkIcon, Plus } from "lucide-react";
+import { Link as LinkIcon, Pencil } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createEmailTemplate } from "@/lib/email/campaigns";
+import type { EmailTemplate } from "@/lib/db/schema/communications";
+import { updateEmailTemplate } from "@/lib/email/campaigns";
 
 const VARIABLES = [
   "{{prénom}}",
@@ -42,11 +43,15 @@ const CATEGORIES = [
   { value: "transactional", label: "Transactionnel" },
 ];
 
-export function TemplateCreateDialog() {
+interface Props {
+  template: EmailTemplate;
+}
+
+export function TemplateEditDialog({ template }: Props) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState(template.subject);
+  const [body, setBody] = useState(template.bodyHtml);
   const [activeField, setActiveField] = useState<"subject" | "body">("body");
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -91,14 +96,11 @@ export function TemplateCreateDialog() {
     formData.set("subject", subject);
     formData.set("body", body);
     start(async () => {
-      const res = await createEmailTemplate(formData);
+      const res = await updateEmailTemplate(template.id, formData);
       if (res.ok) {
-        toast.success("Template créé");
+        toast.success("Template mis à jour");
         setOpen(false);
-        setSubject("");
-        setBody("");
         setActiveField("body");
-        setShowLinkForm(false);
       } else {
         toast.error(res.error);
       }
@@ -108,27 +110,34 @@ export function TemplateCreateDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
-          <Plus className="mr-1 size-4" /> Nouveau template
+        <Button variant="ghost" size="icon">
+          <Pencil className="size-4" />
+          <span className="sr-only">Modifier le template</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Nouveau template email</DialogTitle>
+          <DialogTitle>Modifier le template</DialogTitle>
           <DialogDescription>
-            Créez un modèle réutilisable avec des variables personnalisées.
+            Modifiez le modèle. Les variables sont remplacées automatiquement à l&apos;envoi.
           </DialogDescription>
         </DialogHeader>
         <form action={onSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-name">Nom du template</Label>
-            <Input id="tpl-name" name="name" required maxLength={160} />
+            <Label htmlFor="edit-tpl-name">Nom du template</Label>
+            <Input
+              id="edit-tpl-name"
+              name="name"
+              required
+              maxLength={160}
+              defaultValue={template.name}
+            />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-category">Catégorie</Label>
-            <Select name="category" defaultValue="outreach">
-              <SelectTrigger id="tpl-category">
+            <Label htmlFor="edit-tpl-category">Catégorie</Label>
+            <Select name="category" defaultValue={template.category}>
+              <SelectTrigger id="edit-tpl-category">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -142,9 +151,9 @@ export function TemplateCreateDialog() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-subject">Objet de l&apos;email</Label>
+            <Label htmlFor="edit-tpl-subject">Objet de l&apos;email</Label>
             <Input
-              id="tpl-subject"
+              id="edit-tpl-subject"
               name="subject"
               required
               maxLength={200}
@@ -156,9 +165,9 @@ export function TemplateCreateDialog() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="tpl-body">Corps du message</Label>
+            <Label htmlFor="edit-tpl-body">Corps du message</Label>
             <Textarea
-              id="tpl-body"
+              id="edit-tpl-body"
               name="body"
               rows={8}
               required
@@ -226,7 +235,7 @@ export function TemplateCreateDialog() {
           </div>
 
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Création…" : "Créer le template"}
+            {pending ? "Mise à jour…" : "Enregistrer les modifications"}
           </Button>
         </form>
       </DialogContent>
