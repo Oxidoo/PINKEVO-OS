@@ -1,10 +1,10 @@
 "use client";
 
-import { Archive, ArchiveRestore } from "lucide-react";
+import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { archiveCampaign, unarchiveCampaign } from "@/lib/email/campaigns";
+import { archiveCampaign, deleteCampaign, unarchiveCampaign } from "@/lib/email/campaigns";
 
 export function ArchiveButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
@@ -22,6 +22,27 @@ export function ArchiveButton({ id }: { id: string }) {
       }
     >
       <Archive className="size-3.5" />
+    </Button>
+  );
+}
+
+export function DeleteCampaignButton({ id }: { id: string }) {
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      disabled={pending}
+      onClick={() => {
+        if (!confirm("Supprimer définitivement cette campagne ?")) return;
+        start(async () => {
+          const r = await deleteCampaign(id);
+          if (r.ok) toast.success("Campagne supprimée");
+          else toast.error(r.error);
+        });
+      }}
+    >
+      <Trash2 className="size-3.5 text-destructive" />
     </Button>
   );
 }

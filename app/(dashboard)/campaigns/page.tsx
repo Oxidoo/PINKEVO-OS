@@ -19,7 +19,7 @@ import {
   getEmailMessages,
   getEmailTemplates,
 } from "@/lib/email/campaigns";
-import { ArchiveButton, UnarchiveButton } from "./archive-button";
+import { ArchiveButton, DeleteCampaignButton, UnarchiveButton } from "./archive-button";
 import { CampaignCreateDialog } from "./campaign-create-dialog";
 import { MessagesTable } from "./messages-table";
 import { SendButton } from "./send-button";
@@ -85,7 +85,9 @@ export default async function CampaignsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">N°</TableHead>
                     <TableHead>Nom</TableHead>
+                    <TableHead>Objet de l&apos;email</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead className="text-right">Envoyés</TableHead>
                     <TableHead className="text-right">Ouvertures</TableHead>
@@ -93,22 +95,41 @@ export default async function CampaignsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
-                      <TableCell>
-                        <Badge variant={STATUS_VARIANT[c.status] ?? "secondary"}>{c.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{c.sentCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.openCount}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <SendButton id={c.id} disabled={c.status === "sent"} />
-                          <ArchiveButton id={c.id} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {campaigns.map((c, i) => {
+                    const subject =
+                      (c.audienceFilter as { subject?: string } | null)?.subject ?? "—";
+                    const scheduledAt = c.scheduledAt ? new Date(c.scheduledAt) : null;
+                    return (
+                      <TableRow key={c.id}>
+                        <TableCell className="text-muted-foreground tabular-nums">
+                          #{campaigns.length - i}
+                        </TableCell>
+                        <TableCell className="font-medium">{c.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{subject}</TableCell>
+                        <TableCell>
+                          <Badge variant={STATUS_VARIANT[c.status] ?? "secondary"}>
+                            {c.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{c.sentCount}</TableCell>
+                        <TableCell className="text-right tabular-nums">{c.openCount}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {c.status === "scheduled" && scheduledAt ? (
+                              <Button size="sm" variant="secondary" disabled>
+                                Envoi auto ·{" "}
+                                {format(scheduledAt, "dd/MM/yyyy HH:mm", { locale: fr })}
+                              </Button>
+                            ) : (
+                              <SendButton id={c.id} disabled={c.status === "sent"} />
+                            )}
+                            <ArchiveButton id={c.id} />
+                            <DeleteCampaignButton id={c.id} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -134,7 +155,10 @@ export default async function CampaignsPage() {
                         <TableCell className="text-right tabular-nums">{c.sentCount}</TableCell>
                         <TableCell className="text-right tabular-nums">{c.openCount}</TableCell>
                         <TableCell className="text-right">
-                          <UnarchiveButton id={c.id} />
+                          <div className="flex items-center justify-end gap-1">
+                            <UnarchiveButton id={c.id} />
+                            <DeleteCampaignButton id={c.id} />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
