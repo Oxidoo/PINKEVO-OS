@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { type SimpleState, updateMyProfile } from "@/lib/auth/profile-actions";
 import { ROLE_LABELS_FR } from "@/lib/auth/rbac";
 import type { Profile } from "@/lib/db/schema";
@@ -64,6 +65,21 @@ export function ProfileForm({ profile, email }: { profile: Profile; email: strin
               defaultValue={profile.telegramChatId ?? ""}
               placeholder="Pour recevoir les rapports quotidiens du bot"
             />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="emailSignature">Signature email</Label>
+            <Textarea
+              id="emailSignature"
+              name="emailSignature"
+              defaultValue={profile.emailSignature ?? ""}
+              placeholder={"Ex: Prénom Nom\nAgence PINKEVO\n+33 6 00 00 00 00"}
+              rows={4}
+              maxLength={1000}
+              className="resize-none font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Apparaît automatiquement dans chaque email envoyé via les campagnes.
+            </p>
           </div>
           <div className="sm:col-span-2">
             <SaveButton />

@@ -20,6 +20,7 @@ export const profiles = pgTable("profiles", {
   locale: locale("locale").notNull().default("fr"),
   theme: theme("theme").notNull().default("system"),
   telegramChatId: varchar("telegram_chat_id", { length: 64 }),
+  emailSignature: text("email_signature"),
   ...timestamps,
 });
 

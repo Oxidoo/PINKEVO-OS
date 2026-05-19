@@ -31,6 +31,7 @@ export const emailCampaigns = pgTable("email_campaigns", {
   openCount: integer("open_count").notNull().default(0),
   clickCount: integer("click_count").notNull().default(0),
   replyCount: integer("reply_count").notNull().default(0),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
   ...timestamps,
 });
 
