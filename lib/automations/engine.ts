@@ -70,7 +70,6 @@ async function executeStep(step: AutomationStep, payload: AutomationPayload): Pr
         subject: "On reprend contact",
         leadId: lead.id,
         react: FollowUpEmail({
-          contactName: lead.firstName ?? lead.company ?? "bonjour",
           message: "Nous revenons vers vous suite à votre intérêt. Disponible pour un échange ?",
         }),
       });
