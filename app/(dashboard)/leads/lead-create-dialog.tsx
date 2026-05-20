@@ -21,13 +21,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createLead } from "@/lib/crm/leads";
-import { LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
+import { CATEGORY_SECTORS, LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
 
 export function LeadCreateDialog() {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("");
   const [sector, setSector] = useState("");
   const [pending, start] = useTransition();
+
+  const sectorsForCategory = category
+    ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS)
+    : LEAD_SECTORS;
+
+  function handleCategoryChange(v: string) {
+    setCategory(v);
+    setSector(""); // reset sector when category changes
+  }
 
   function onSubmit(formData: FormData) {
     if (category) formData.set("category", category);
@@ -80,7 +89,7 @@ export function LeadCreateDialog() {
 
           <div className="space-y-1.5">
             <Label>Catégorie</Label>
-            <Select value={category} onValueChange={setCategory}>
+            <Select value={category} onValueChange={handleCategoryChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner…" />
               </SelectTrigger>
@@ -101,13 +110,18 @@ export function LeadCreateDialog() {
                 <SelectValue placeholder="Sélectionner…" />
               </SelectTrigger>
               <SelectContent>
-                {LEAD_SECTORS.map((s) => (
+                {sectorsForCategory.map((s) => (
                   <SelectItem key={s} value={s}>
                     {s}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="zone">Zone (ville, région…)</Label>
+            <Input id="zone" name="zone" placeholder="Ex : Lyon, Nord 59, Paris 75…" />
           </div>
 
           <div className="sm:col-span-2">

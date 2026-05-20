@@ -67,6 +67,7 @@ export const leadInput = z.object({
   company: optionalText,
   category: optionalText,
   sector: optionalText,
+  zone: optionalText,
   source: z.enum(leadSourceValues).default("manual"),
   status: z.enum(leadStatusValues).default("new"),
 });

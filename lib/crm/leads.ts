@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, isNotNull, or } from "drizzle-orm";
+import { desc, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
@@ -117,9 +117,24 @@ const richCsvRowSchema = z.object({
   enrichmentData: z.record(z.string(), z.string()).optional(),
 });
 
+export async function deleteLead(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  await db.delete(leads).where(eq(leads.id, id));
+  revalidatePath("/leads");
+  return { ok: true };
+}
+
+export async function bulkDeleteLeads(ids: string[]): Promise<ActionResult> {
+  if (ids.length === 0) return { ok: false, error: "Aucun lead sélectionné" };
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  await db.delete(leads).where(inArray(leads.id, ids));
+  revalidatePath("/leads");
+  return { ok: true, id: String(ids.length) };
+}
+
 export async function importLeadsFromCsv(
   rows: unknown[],
-  defaults: { category?: string; sector?: string },
+  defaults: { category?: string; sector?: string; zone?: string },
 ): Promise<ActionResult> {
   const profile = await requireRole(["owner", "admin", "manager", "sales"]);
 
@@ -167,6 +182,7 @@ export async function importLeadsFromCsv(
     ...r,
     category: defaults.category || null,
     sector: defaults.sector || null,
+    zone: defaults.zone || null,
     source: "csv" as const,
     status: "new" as const,
     assignedTo: profile.id,
