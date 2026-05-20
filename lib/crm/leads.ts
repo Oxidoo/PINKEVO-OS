@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, isNotNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
@@ -106,6 +106,79 @@ export async function importLeadsCsv(rows: unknown[]): Promise<ActionResult> {
   }
   revalidatePath("/leads");
   return { ok: true, id: String(valid.length) };
+}
+
+const richCsvRowSchema = z.object({
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional().or(z.literal("")),
+  phone: z.string().nullable().optional(),
+  company: z.string().nullable().optional(),
+  enrichmentData: z.record(z.string()).optional(),
+});
+
+export async function importLeadsFromCsv(
+  rows: unknown[],
+  defaults: { category?: string; sector?: string },
+): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "sales"]);
+
+  const valid = rows
+    .map((r) => richCsvRowSchema.safeParse(r))
+    .filter((r): r is z.ZodSafeParseSuccess<z.infer<typeof richCsvRowSchema>> => r.success)
+    .map((r) => ({
+      firstName: r.data.firstName || null,
+      lastName: r.data.lastName || null,
+      email: r.data.email || null,
+      phone: r.data.phone || null,
+      company: r.data.company || null,
+      enrichmentData:
+        r.data.enrichmentData && Object.keys(r.data.enrichmentData).length > 0
+          ? r.data.enrichmentData
+          : null,
+    }))
+    .filter((r) => r.email || r.company || r.lastName);
+
+  if (valid.length === 0) return { ok: false, error: "Aucune ligne valide dans le CSV" };
+
+  const existing = await db
+    .select({ email: leads.email, phone: leads.phone })
+    .from(leads)
+    .where(or(isNotNull(leads.email), isNotNull(leads.phone)));
+
+  const existingEmails = new Set(
+    existing.map((l: { email: string | null; phone: string | null }) => l.email).filter(Boolean),
+  );
+  const existingPhones = new Set(
+    existing.map((l: { email: string | null; phone: string | null }) => l.phone).filter(Boolean),
+  );
+
+  const deduped = valid.filter((r) => {
+    if (r.email && existingEmails.has(r.email)) return false;
+    if (r.phone && existingPhones.has(r.phone)) return false;
+    return true;
+  });
+
+  const skipped = valid.length - deduped.length;
+  if (deduped.length === 0)
+    return { ok: false, error: `Tous les leads existent déjà (${skipped} doublons ignorés)` };
+
+  const toInsert = deduped.map((r) => ({
+    ...r,
+    category: defaults.category || null,
+    sector: defaults.sector || null,
+    source: "csv" as const,
+    status: "new" as const,
+    assignedTo: profile.id,
+  }));
+
+  const inserted = await db.insert(leads).values(toInsert).returning({ id: leads.id });
+  const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+  for (const row of inserted.slice(0, 50)) {
+    await dispatchAutomationEvent("pinkevo/lead.created", { leadId: row.id });
+  }
+  revalidatePath("/leads");
+  return { ok: true, id: JSON.stringify({ imported: deduped.length, skipped }) };
 }
 
 export async function convertLeadToClient(id: string): Promise<ActionResult> {
