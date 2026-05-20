@@ -39,7 +39,12 @@ function parseSegments(
   text: string,
 ): Array<{ type: "text" | "link"; content: string; href?: string; style?: CSSProperties }> {
   const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)(?:\{([^}]*)\})?/g;
-  const segments: Array<{ type: "text" | "link"; content: string; href?: string; style?: CSSProperties }> = [];
+  const segments: Array<{
+    type: "text" | "link";
+    content: string;
+    href?: string;
+    style?: CSSProperties;
+  }> = [];
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = linkRe.exec(text)) !== null) {

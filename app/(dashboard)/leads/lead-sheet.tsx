@@ -5,12 +5,7 @@ import { fr } from "date-fns/locale";
 import { Building2, Calendar, Globe, Mail, MapPin, Phone, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Lead } from "@/lib/db/schema";
 
 function leadName(lead: Lead) {

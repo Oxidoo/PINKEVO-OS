@@ -19,7 +19,10 @@ function verifySignature(body: string, signature: string | null): boolean {
   try {
     return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(raw, "hex"));
   } catch (err) {
-    logger.warn({ err, sigLen: raw.length, expectedLen: expected.length }, "cal.com signature compare failed");
+    logger.warn(
+      { err, sigLen: raw.length, expectedLen: expected.length },
+      "cal.com signature compare failed",
+    );
     return false;
   }
 }

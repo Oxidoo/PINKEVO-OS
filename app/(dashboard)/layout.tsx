@@ -13,14 +13,15 @@ import {
   Wallet,
   Workflow,
 } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { LocaleToggle } from "@/components/shared/locale-toggle";
+import { MobileNav, type MobileNavItem } from "@/components/shared/mobile-nav";
+import { SidebarNav } from "@/components/shared/sidebar-nav";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
 import { getUser, requireUser } from "@/lib/auth/server";
 
-const navItems = [
+const navItems: readonly MobileNavItem[] = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/leads", label: "Leads", icon: Sparkles },
@@ -47,23 +48,21 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <span className="inline-block size-2.5 rounded-full bg-brand-500" />
           <span className="font-semibold tracking-tight">PINKEVO OS</span>
         </div>
-        <nav className="flex flex-1 flex-col gap-0.5 p-3">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            >
-              <Icon className="size-4" aria-hidden />
-              {label}
-            </Link>
-          ))}
-        </nav>
+        <SidebarNav items={navItems} />
         <div className="border-t p-3 text-xs text-muted-foreground">v0.1 · phase 1</div>
       </aside>
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b bg-background px-6">
-          <h1 className="text-sm font-medium text-muted-foreground">Cockpit agence</h1>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 items-center justify-between gap-2 border-b bg-background px-4 sm:px-6">
+          <div className="flex items-center gap-2 min-w-0">
+            <MobileNav items={navItems} />
+            <span className="flex items-center gap-2 font-semibold tracking-tight md:hidden">
+              <span className="inline-block size-2.5 rounded-full bg-brand-500" />
+              <span className="text-sm">PINKEVO OS</span>
+            </span>
+            <h1 className="hidden text-sm font-medium text-muted-foreground md:block">
+              Cockpit agence
+            </h1>
+          </div>
           <div className="flex items-center gap-1">
             <LocaleToggle />
             <ThemeToggle />
@@ -76,7 +75,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             />
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-6 p-6">{children}</main>
+        <main className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">{children}</main>
       </div>
     </div>
   );

@@ -2,12 +2,7 @@
 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface Props {
   message: {
@@ -23,7 +18,12 @@ interface Props {
 
 export function MessageViewSheet({ message, open, onClose }: Props) {
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{message?.subject ?? ""}</SheetTitle>

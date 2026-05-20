@@ -91,7 +91,10 @@ export function LinkInsertForm({
         </div>
         <div className="space-y-1 col-span-2">
           <Label className="text-xs">Police</Label>
-          <Select value={font || "_default"} onValueChange={(v) => setFont(v === "_default" ? "" : v)}>
+          <Select
+            value={font || "_default"}
+            onValueChange={(v) => setFont(v === "_default" ? "" : v)}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

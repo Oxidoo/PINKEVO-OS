@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -53,16 +53,16 @@ function parseCsvRfc4180(text: string): string[][] {
       }
     } else if (ch === '"') {
       inQuote = true;
-    } else if (ch === ',') {
+    } else if (ch === ",") {
       row.push(field);
       field = "";
-    } else if (ch === '\r' && text[i + 1] === '\n') {
+    } else if (ch === "\r" && text[i + 1] === "\n") {
       row.push(field);
       field = "";
       rows.push(row);
       row = [];
       i++;
-    } else if (ch === '\n') {
+    } else if (ch === "\n") {
       row.push(field);
       field = "";
       rows.push(row);
@@ -105,11 +105,7 @@ function parseRows(text: string): ParsedLead[] {
   if (raw.length < 2) return [];
 
   const headers = (raw[0] ?? []).map((h) =>
-    h
-      .toLowerCase()
-      .trim()
-      .replace(/['"]/g, "")
-      .replace(/\s+/g, " "),
+    h.toLowerCase().trim().replace(/['"]/g, "").replace(/\s+/g, " "),
   );
 
   const idx = (names: string[]): number =>
@@ -241,7 +237,9 @@ export function CsvImportDialog() {
                 ? `${rows.length} leads détectés — cliquer pour changer de fichier`
                 : "Cliquer ou glisser un fichier CSV ici"}
             </span>
-            <span className="text-xs text-muted-foreground">Bing Maps Scraper, export standard…</span>
+            <span className="text-xs text-muted-foreground">
+              Bing Maps Scraper, export standard…
+            </span>
             <input
               ref={fileRef}
               type="file"
@@ -266,15 +264,11 @@ export function CsvImportDialog() {
                   <TableBody>
                     {preview.map((r: ParsedLead, i: number) => {
                       const name =
-                        (r.company ??
-                          `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim()) ||
-                        "—";
+                        (r.company ?? `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim()) || "—";
                       return (
                         <TableRow key={i}>
                           <TableCell className="font-medium">{name}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {r.phone ?? "—"}
-                          </TableCell>
+                          <TableCell className="text-muted-foreground">{r.phone ?? "—"}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {r.email ?? "—"}
                           </TableCell>
@@ -295,7 +289,7 @@ export function CsvImportDialog() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Catégorie (appliquée à tous)</Label>
                   <Select
@@ -330,14 +324,13 @@ export function CsvImportDialog() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Aucun</SelectItem>
-                      {(category
-                        ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS)
-                        : LEAD_SECTORS
-                      ).map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
+                      {(category ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS) : LEAD_SECTORS).map(
+                        (s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

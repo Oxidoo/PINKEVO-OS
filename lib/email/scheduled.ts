@@ -54,7 +54,10 @@ export async function executeCampaignSend(
   if (filter.category) conditions.push(eq(leads.category, filter.category));
   if (filter.sector) conditions.push(eq(leads.sector, filter.sector));
 
-  const recipients = await db.select().from(leads).where(and(...conditions));
+  const recipients = await db
+    .select()
+    .from(leads)
+    .where(and(...conditions));
 
   await db.update(emailCampaigns).set({ status: "sending" }).where(eq(emailCampaigns.id, id));
 

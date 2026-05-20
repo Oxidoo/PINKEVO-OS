@@ -24,7 +24,7 @@ import {
 } from "@/lib/crm/leads";
 import type { Lead } from "@/lib/db/schema";
 import { LeadSheet } from "./lead-sheet";
-import { DEFAULT_FILTERS, LeadsFilterBar, type LeadFilters } from "./leads-filters";
+import { DEFAULT_FILTERS, type LeadFilters, LeadsFilterBar } from "./leads-filters";
 
 const COLUMNS = [
   { id: "new", label: "Nouveau" },
@@ -240,7 +240,7 @@ function Column({
       </div>
       <div
         ref={setNodeRef}
-        className={`flex min-h-[60vh] flex-col gap-2 rounded-xl border border-dashed p-2 transition ${
+        className={`flex min-h-[35vh] flex-col gap-2 rounded-xl border border-dashed p-2 transition sm:min-h-[60vh] ${
           isOver ? "border-brand-400 bg-brand-50/50" : ""
         }`}
       >
@@ -263,7 +263,9 @@ function Column({
 export function LeadsBoard({ leads }: { leads: Lead[] }) {
   const router = useRouter();
   const [items, setItems] = useState(leads);
-  useEffect(() => { setItems(leads); }, [leads]);
+  useEffect(() => {
+    setItems(leads);
+  }, [leads]);
   const [optimistic, setOptimistic] = useOptimistic(items);
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -327,7 +329,9 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
     start(async () => {
       const r = await bulkDeleteLeads(ids);
       if (r.ok) {
-        toast.success(`${r.id} lead${Number(r.id) > 1 ? "s" : ""} supprimé${Number(r.id) > 1 ? "s" : ""}`);
+        toast.success(
+          `${r.id} lead${Number(r.id) > 1 ? "s" : ""} supprimé${Number(r.id) > 1 ? "s" : ""}`,
+        );
         router.refresh();
       } else {
         toast.error(r.error);
@@ -361,22 +365,14 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
       {selectionMode && selected.size > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5">
           <span className="text-sm font-medium">
-            {selected.size} lead{selected.size > 1 ? "s" : ""} sélectionné{selected.size > 1 ? "s" : ""}
+            {selected.size} lead{selected.size > 1 ? "s" : ""} sélectionné
+            {selected.size > 1 ? "s" : ""}
           </span>
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSelected(new Set())}
-            >
+            <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
               Tout désélectionner
             </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={pending}
-              onClick={handleBulkDelete}
-            >
+            <Button size="sm" variant="destructive" disabled={pending} onClick={handleBulkDelete}>
               <Trash2 className="mr-1 size-4" />
               Supprimer ({selected.size})
             </Button>
@@ -402,11 +398,7 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
         </div>
       </DndContext>
 
-      <LeadSheet
-        lead={selectedLead}
-        open={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
-      />
+      <LeadSheet lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} />
     </>
   );
 }

@@ -62,9 +62,7 @@ export const CATEGORY_SECTORS: Record<string, string[]> = {
   Autre: ["Coiffeur", "Coach", "Esthéticienne", "Photographe", "Autre"],
 };
 
-export const LEAD_SECTORS = [
-  ...new Set(Object.values(CATEGORY_SECTORS).flat()),
-].sort() as string[];
+export const LEAD_SECTORS = [...new Set(Object.values(CATEGORY_SECTORS).flat())].sort() as string[];
 
 export type LeadFilters = {
   query: string;
@@ -108,8 +106,8 @@ export function LeadsFilterBar({
     filters.zone !== "";
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <div className="relative min-w-36 flex-1">
+    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <div className="relative col-span-2 min-w-0 sm:min-w-36 sm:flex-1">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input
           placeholder="Rechercher un lead…"
@@ -123,14 +121,14 @@ export function LeadsFilterBar({
         <MapPin className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input
           placeholder="Zone (ville…)"
-          className="w-36 pl-8"
+          className="w-full pl-8 sm:w-36"
           value={filters.zone}
           onChange={(e) => set("zone", e.target.value)}
         />
       </div>
 
       <Select value={filters.category} onValueChange={(v) => set("category", v)}>
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44">
           <SelectValue placeholder="Catégorie" />
         </SelectTrigger>
         <SelectContent>
@@ -144,7 +142,7 @@ export function LeadsFilterBar({
       </Select>
 
       <Select value={filters.sector} onValueChange={(v) => set("sector", v)}>
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-full sm:w-44">
           <SelectValue placeholder="Secteur" />
         </SelectTrigger>
         <SelectContent>
@@ -157,11 +155,8 @@ export function LeadsFilterBar({
         </SelectContent>
       </Select>
 
-      <Select
-        value={filters.sort}
-        onValueChange={(v) => set("sort", v as LeadFilters["sort"])}
-      >
-        <SelectTrigger className="w-36">
+      <Select value={filters.sort} onValueChange={(v) => set("sort", v as LeadFilters["sort"])}>
+        <SelectTrigger className="w-full sm:w-36">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -172,7 +167,12 @@ export function LeadsFilterBar({
       </Select>
 
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={() => onChange(DEFAULT_FILTERS)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onChange(DEFAULT_FILTERS)}
+          className="col-span-2 sm:col-span-1"
+        >
           Réinitialiser
         </Button>
       )}
