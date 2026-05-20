@@ -1,3 +1,4 @@
+import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ export default async function CampaignsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <AutoRefresh />
       <PageHeader
         title="Communication"
         description="Campagnes email & journal des messages"
