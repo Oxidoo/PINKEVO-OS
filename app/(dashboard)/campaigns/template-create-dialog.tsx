@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createEmailTemplate } from "@/lib/email/campaigns";
+import { LinkInsertForm } from "./link-insert-form";
 
 const VARIABLES = [
   "{{prénom}}",
@@ -54,8 +55,6 @@ export function TemplateCreateDialog() {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
   const [showLinkForm, setShowLinkForm] = useState(false);
-  const [linkText, setLinkText] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
 
   function insertVariable(variable: string) {
     if (activeField === "subject" && subjectRef.current) {
@@ -79,14 +78,6 @@ export function TemplateCreateDialog() {
         el.setSelectionRange(start + variable.length, start + variable.length);
       });
     }
-  }
-
-  function insertLink() {
-    if (!linkText || !linkUrl) return;
-    insertVariable(`[${linkText}](${linkUrl})`);
-    setLinkText("");
-    setLinkUrl("");
-    setShowLinkForm(false);
   }
 
   function onSubmit(formData: FormData) {
@@ -199,32 +190,13 @@ export function TemplateCreateDialog() {
             </div>
 
             {showLinkForm && (
-              <div className="rounded-lg border p-3 space-y-2">
-                <Input
-                  placeholder="Texte du lien"
-                  value={linkText}
-                  onChange={(e) => setLinkText(e.target.value)}
-                />
-                <Input
-                  placeholder="https://..."
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  type="url"
-                />
-                <div className="flex gap-2">
-                  <Button type="button" size="sm" onClick={insertLink}>
-                    Insérer
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowLinkForm(false)}
-                  >
-                    Annuler
-                  </Button>
-                </div>
-              </div>
+              <LinkInsertForm
+                onInsert={(md) => {
+                  insertVariable(md);
+                  setShowLinkForm(false);
+                }}
+                onCancel={() => setShowLinkForm(false)}
+              />
             )}
           </div>
 

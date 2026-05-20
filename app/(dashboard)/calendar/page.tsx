@@ -1,4 +1,5 @@
 import { endOfMonth, startOfMonth } from "date-fns";
+import { AutoRefresh } from "@/components/shared/auto-refresh";
 import { PageHeader } from "@/components/shared/page-header";
 import { requireUser } from "@/lib/auth/server";
 import { getCalendarEvents, googleConnectionStatus } from "@/lib/calendar/actions";
@@ -22,6 +23,7 @@ export default async function CalendarPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <AutoRefresh intervalMs={30_000} />
       <PageHeader
         title="Calendrier"
         description="Google Calendar + bookings Cal.com · matching auto leads/clients"

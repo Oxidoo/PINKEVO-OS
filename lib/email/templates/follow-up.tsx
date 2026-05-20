@@ -1,4 +1,5 @@
 import { Body, Container, Head, Html, Link, Text } from "@react-email/components";
+import type { CSSProperties } from "react";
 
 const s = {
   body: {
@@ -20,16 +21,35 @@ const s = {
   link: { color: "#EC4899" },
 };
 
+function parseStyleBlock(raw: string | undefined): CSSProperties {
+  if (!raw) return {};
+  const style: CSSProperties = {};
+  for (const part of raw.split(";")) {
+    const [k, v] = part.split(":").map((s) => s.trim());
+    if (!k || !v) continue;
+    if (k === "color") style.color = v;
+    else if (k === "size") style.fontSize = `${v}px`;
+    else if (k === "font") style.fontFamily = v;
+    else if (k === "bold" && v === "1") style.fontWeight = 700;
+  }
+  return style;
+}
+
 function parseSegments(
   text: string,
-): Array<{ type: "text" | "link"; content: string; href?: string }> {
-  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
-  const segments: Array<{ type: "text" | "link"; content: string; href?: string }> = [];
+): Array<{ type: "text" | "link"; content: string; href?: string; style?: CSSProperties }> {
+  const linkRe = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)(?:\{([^}]*)\})?/g;
+  const segments: Array<{ type: "text" | "link"; content: string; href?: string; style?: CSSProperties }> = [];
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = linkRe.exec(text)) !== null) {
     if (m.index > last) segments.push({ type: "text", content: text.slice(last, m.index) });
-    segments.push({ type: "link", content: m[1] ?? "", href: m[2] ?? "" });
+    segments.push({
+      type: "link",
+      content: m[1] ?? "",
+      href: m[2] ?? "",
+      style: parseStyleBlock(m[3]),
+    });
     last = m.index + m[0].length;
   }
   if (last < text.length) segments.push({ type: "text", content: text.slice(last) });
@@ -58,7 +78,7 @@ export function FollowUpEmail({ message, signature }: FollowUpEmailProps) {
               <Text key={i} style={s.text}>
                 {segments.map((seg, j) =>
                   seg.type === "link" ? (
-                    <Link key={j} href={seg.href} style={s.link}>
+                    <Link key={j} href={seg.href} style={{ ...s.link, ...seg.style }}>
                       {seg.content}
                     </Link>
                   ) : (
