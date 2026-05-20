@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { Building2, CheckSquare, Sparkles, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -263,6 +263,7 @@ function Column({
 export function LeadsBoard({ leads }: { leads: Lead[] }) {
   const router = useRouter();
   const [items, setItems] = useState(leads);
+  useEffect(() => { setItems(leads); }, [leads]);
   const [optimistic, setOptimistic] = useOptimistic(items);
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
