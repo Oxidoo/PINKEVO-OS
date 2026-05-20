@@ -1,6 +1,7 @@
 "use client";
 
 import { Link as LinkIcon, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ interface Props {
 }
 
 export function TemplateEditDialog({ template }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [subject, setSubject] = useState(template.subject);
@@ -99,6 +101,7 @@ export function TemplateEditDialog({ template }: Props) {
       const res = await updateEmailTemplate(template.id, formData);
       if (res.ok) {
         toast.success("Template mis à jour");
+        router.refresh();
         setOpen(false);
         setActiveField("body");
       } else {

@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { createLead } from "@/lib/crm/leads";
 import { CATEGORY_SECTORS, LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
 
 export function LeadCreateDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("");
   const [sector, setSector] = useState("");
@@ -45,6 +47,7 @@ export function LeadCreateDialog() {
       const res = await createLead(formData);
       if (res.ok) {
         toast.success("Lead créé");
+        router.refresh();
         setOpen(false);
         setCategory("");
         setSector("");

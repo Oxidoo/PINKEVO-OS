@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
@@ -22,12 +23,16 @@ function SaveButton() {
 }
 
 export function ProfileForm({ profile, email }: { profile: Profile; email: string }) {
+  const router = useRouter();
   const [state, action] = useActionState<SimpleState, FormData>(updateMyProfile, undefined);
 
   useEffect(() => {
-    if (state?.ok) toast.success("Profil mis à jour");
+    if (state?.ok) {
+      toast.success("Profil mis à jour");
+      router.refresh();
+    }
     if (state?.error) toast.error(state.error);
-  }, [state]);
+  }, [state, router]);
 
   return (
     <Card className="max-w-2xl">

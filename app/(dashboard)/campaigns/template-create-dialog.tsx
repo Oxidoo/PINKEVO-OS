@@ -1,6 +1,7 @@
 "use client";
 
 import { Link as LinkIcon, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ const CATEGORIES = [
 ];
 
 export function TemplateCreateDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [subject, setSubject] = useState("");
@@ -94,6 +96,7 @@ export function TemplateCreateDialog() {
       const res = await createEmailTemplate(formData);
       if (res.ok) {
         toast.success("Template créé");
+        router.refresh();
         setOpen(false);
         setSubject("");
         setBody("");

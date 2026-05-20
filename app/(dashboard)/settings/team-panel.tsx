@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
@@ -50,27 +51,39 @@ interface TeamPanelProps {
 }
 
 export function TeamPanel({ currentUserId, members, invitations }: TeamPanelProps) {
+  const router = useRouter();
   const [state, action] = useActionState<SimpleState, FormData>(inviteTeammate, undefined);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (state?.ok) toast.success("Invitation envoyée");
+    if (state?.ok) {
+      toast.success("Invitation envoyée");
+      router.refresh();
+    }
     if (state?.error) toast.error(state.error);
-  }, [state]);
+  }, [state, router]);
 
   const onRoleChange = (memberId: string, role: Role) => {
     startTransition(async () => {
       const res = await updateMemberRole(memberId, role);
-      if (res?.error) toast.error(res.error);
-      else toast.success("Rôle mis à jour");
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Rôle mis à jour");
+        router.refresh();
+      }
     });
   };
 
   const onRevoke = (id: string) => {
     startTransition(async () => {
       const res = await revokeInvitation(id);
-      if (res?.error) toast.error(res.error);
-      else toast.success("Invitation révoquée");
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Invitation révoquée");
+        router.refresh();
+      }
     });
   };
 

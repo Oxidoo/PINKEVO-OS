@@ -10,6 +10,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Building2, CheckSquare, Sparkles, Trash2, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,7 @@ function LeadCard({
   onSelect: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
 }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     disabled: selectionMode,
@@ -170,7 +172,12 @@ function LeadCard({
                 onClick={() =>
                   start(async () => {
                     const r = await enrichLead(lead.id);
-                    r.ok ? toast.success("Lead enrichi (Pappers)") : toast.error(r.error);
+                    if (r.ok) {
+                      toast.success("Lead enrichi (Pappers)");
+                      router.refresh();
+                    } else {
+                      toast.error(r.error);
+                    }
                   })
                 }
               >
@@ -185,7 +192,12 @@ function LeadCard({
                   onClick={() =>
                     start(async () => {
                       const r = await convertLeadToClient(lead.id);
-                      r.ok ? toast.success("Converti en client") : toast.error(r.error);
+                      if (r.ok) {
+                        toast.success("Converti en client");
+                        router.refresh();
+                      } else {
+                        toast.error(r.error);
+                      }
                     })
                   }
                 >
@@ -249,6 +261,7 @@ function Column({
 }
 
 export function LeadsBoard({ leads }: { leads: Lead[] }) {
+  const router = useRouter();
   const [items, setItems] = useState(leads);
   const [optimistic, setOptimistic] = useOptimistic(items);
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
@@ -273,7 +286,8 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
       prev.map((l) => (l.id === leadId ? { ...l, status: target as Lead["status"] } : l)),
     );
     updateLeadStatus(leadId, target).then((r) => {
-      if (!r.ok) toast.error(r.error);
+      if (r.ok) router.refresh();
+      else toast.error(r.error);
     });
   }
 
@@ -289,7 +303,9 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
     setItems((prev) => prev.filter((l) => l.id !== id));
     start(async () => {
       const r = await deleteLead(id);
-      if (!r.ok) {
+      if (r.ok) {
+        router.refresh();
+      } else {
         toast.error(r.error);
         setItems(items); // rollback
       }
@@ -311,6 +327,7 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
       const r = await bulkDeleteLeads(ids);
       if (r.ok) {
         toast.success(`${r.id} lead${Number(r.id) > 1 ? "s" : ""} supprimé${Number(r.id) > 1 ? "s" : ""}`);
+        router.refresh();
       } else {
         toast.error(r.error);
         setItems(items); // rollback

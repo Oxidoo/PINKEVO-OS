@@ -1,12 +1,14 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteEmailTemplate } from "@/lib/email/campaigns";
 
 export function TemplateDeleteButton({ id }: { id: string }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   return (
     <Button
@@ -17,8 +19,10 @@ export function TemplateDeleteButton({ id }: { id: string }) {
       onClick={() =>
         start(async () => {
           const r = await deleteEmailTemplate(id);
-          if (r.ok) toast.success("Template supprimé");
-          else toast.error(r.error);
+          if (r.ok) {
+            toast.success("Template supprimé");
+            router.refresh();
+          } else toast.error(r.error);
         })
       }
     >
