@@ -1,6 +1,7 @@
 "use client";
 
 import { Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -159,6 +160,7 @@ function parseRows(text: string): ParsedLead[] {
 }
 
 export function CsvImportDialog() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [rows, setRows] = useState<ParsedLead[]>([]);
@@ -198,6 +200,7 @@ export function CsvImportDialog() {
             ? `${imported} leads importés · ${skipped} doublons ignorés`
             : `${imported} leads importés`,
         );
+        router.refresh();
         setOpen(false);
         reset();
       } else {

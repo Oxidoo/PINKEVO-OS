@@ -1,6 +1,7 @@
 "use client";
 
 import { Link as LinkIcon, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ interface Props {
 }
 
 export function CampaignCreateDialog({ templates = [] }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [subject, setSubject] = useState("");
@@ -115,6 +117,7 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
       const res = await createCampaign(formData);
       if (res.ok) {
         toast.success("Campagne créée");
+        router.refresh();
         setOpen(false);
         setSubject("");
         setBody("");

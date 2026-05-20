@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { logActivity } from "@/lib/crm/activities";
 
 export function ActivityComposer({ clientId }: { clientId: string }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -22,6 +24,7 @@ export function ActivityComposer({ clientId }: { clientId: string }) {
       const res = await logActivity(formData);
       if (res.ok) {
         toast.success("Activité enregistrée");
+        router.refresh();
         formRef.current?.reset();
       } else {
         toast.error(res.error);

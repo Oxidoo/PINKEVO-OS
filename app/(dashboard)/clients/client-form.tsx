@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ const STATUS = [
 ] as const;
 
 export function ClientForm({ client, onDone }: { client?: Client; onDone?: () => void }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
 
   function onSubmit(formData: FormData) {
@@ -30,6 +32,7 @@ export function ClientForm({ client, onDone }: { client?: Client; onDone?: () =>
       const res = client ? await updateClient(client.id, formData) : await createClient(formData);
       if (res.ok) {
         toast.success(client ? "Client mis à jour" : "Client créé");
+        router.refresh();
         onDone?.();
       } else {
         toast.error(res.error);

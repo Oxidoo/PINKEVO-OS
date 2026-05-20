@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { createContact } from "@/lib/crm/contacts";
 
 export function ContactDialog({ clientId }: { clientId: string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
 
@@ -24,6 +26,7 @@ export function ContactDialog({ clientId }: { clientId: string }) {
       const res = await createContact(formData);
       if (res.ok) {
         toast.success("Contact ajouté");
+        router.refresh();
         setOpen(false);
       } else {
         toast.error(res.error);
