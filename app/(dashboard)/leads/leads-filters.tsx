@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,62 +27,50 @@ export const LEAD_CATEGORIES = [
   "Autre",
 ] as const;
 
+export const CATEGORY_SECTORS: Record<string, string[]> = {
+  BTP: [
+    "Architecte",
+    "Carreleur",
+    "Chauffagiste",
+    "Climaticien",
+    "Couvreur",
+    "Électricien",
+    "Maçon",
+    "Menuisier",
+    "Peintre",
+    "Plombier",
+  ],
+  "Commerce & Retail": ["Commerçant", "E-commerce", "Franchise", "Autre"],
+  Éducation: ["Auto-école", "Centre de formation", "École privée", "Tuteur", "Autre"],
+  "Finance & Comptabilité": ["Conseiller fiscal", "Expert-comptable", "Conseiller en gestion"],
+  Immobilier: ["Agent immobilier", "Promoteur immobilier", "Syndic de copropriété"],
+  Industrie: ["Carrossier", "Garagiste", "Industriel", "Mécanicien", "Autre"],
+  "IT & Digital": ["Agence marketing", "Designer", "Développeur web", "Consultant IT"],
+  Juridique: ["Avocat", "Huissier", "Notaire"],
+  Restauration: ["Boulanger", "Pâtissier", "Restaurant", "Traiteur", "Bar / Café"],
+  Santé: [
+    "Dentiste",
+    "Infirmier",
+    "Kinésithérapeute",
+    "Médecin généraliste",
+    "Pharmacien",
+    "Psychologue",
+    "Ostéopathe",
+  ],
+  "Transport & Logistique": ["Déménageur", "Transporteur", "Coursier"],
+  Agriculture: ["Agriculteur", "Viticulteur", "Maraîcher", "Autre"],
+  Autre: ["Coiffeur", "Coach", "Esthéticienne", "Photographe", "Autre"],
+};
+
 export const LEAD_SECTORS = [
-  // BTP
-  "Architecte",
-  "Carreleur",
-  "Chauffagiste",
-  "Climaticien",
-  "Couvreur",
-  "Électricien",
-  "Maçon",
-  "Menuisier",
-  "Peintre",
-  "Plombier",
-  // Santé
-  "Dentiste",
-  "Infirmier",
-  "Kinésithérapeute",
-  "Médecin généraliste",
-  "Pharmacien",
-  "Psychologue",
-  "Ostéopathe",
-  // Juridique / Finance
-  "Avocat",
-  "Expert-comptable",
-  "Huissier",
-  "Notaire",
-  "Conseiller fiscal",
-  // Immobilier
-  "Agent immobilier",
-  "Promoteur immobilier",
-  // Services
-  "Coiffeur",
-  "Coach",
-  "Esthéticienne",
-  "Photographe",
-  // Restauration
-  "Boulanger",
-  "Pâtissier",
-  "Restaurant",
-  "Traiteur",
-  // Auto
-  "Carrossier",
-  "Garagiste",
-  // IT & Digital
-  "Agence marketing",
-  "Designer",
-  "Développeur web",
-  // Transport
-  "Déménageur",
-  "Transporteur",
-  "Autre",
-] as const;
+  ...new Set(Object.values(CATEGORY_SECTORS).flat()),
+].sort() as string[];
 
 export type LeadFilters = {
   query: string;
   category: string;
   sector: string;
+  zone: string;
   sort: "date" | "score" | "name";
 };
 
@@ -90,6 +78,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   query: "",
   category: "all",
   sector: "all",
+  zone: "",
   sort: "date",
 };
 
@@ -101,11 +90,22 @@ export function LeadsFilterBar({
   onChange: (f: LeadFilters) => void;
 }) {
   function set(key: keyof LeadFilters, value: string) {
-    onChange({ ...filters, [key]: value });
+    const next = { ...filters, [key]: value };
+    // Reset sector when category changes
+    if (key === "category") next.sector = "all";
+    onChange(next);
   }
 
+  const sectorsForCategory =
+    filters.category !== "all"
+      ? (CATEGORY_SECTORS[filters.category] ?? LEAD_SECTORS)
+      : LEAD_SECTORS;
+
   const hasActiveFilters =
-    filters.query !== "" || filters.category !== "all" || filters.sector !== "all";
+    filters.query !== "" ||
+    filters.category !== "all" ||
+    filters.sector !== "all" ||
+    filters.zone !== "";
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -116,6 +116,16 @@ export function LeadsFilterBar({
           className="pl-8"
           value={filters.query}
           onChange={(e) => set("query", e.target.value)}
+        />
+      </div>
+
+      <div className="relative">
+        <MapPin className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+        <Input
+          placeholder="Zone (ville…)"
+          className="w-36 pl-8"
+          value={filters.zone}
+          onChange={(e) => set("zone", e.target.value)}
         />
       </div>
 
@@ -139,7 +149,7 @@ export function LeadsFilterBar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Tous secteurs</SelectItem>
-          {LEAD_SECTORS.map((s) => (
+          {sectorsForCategory.map((s) => (
             <SelectItem key={s} value={s}>
               {s}
             </SelectItem>

@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -29,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { importLeadsFromCsv } from "@/lib/crm/leads";
-import { LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
+import { CATEGORY_SECTORS, LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
 
 // RFC 4180 compliant CSV parser — handles quoted fields with commas/newlines inside
 function parseCsvRfc4180(text: string): string[][] {
@@ -163,6 +164,7 @@ export function CsvImportDialog() {
   const [rows, setRows] = useState<ParsedLead[]>([]);
   const [category, setCategory] = useState("");
   const [sector, setSector] = useState("");
+  const [zone, setZone] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   function onFile(e: ChangeEvent<HTMLInputElement>) {
@@ -175,6 +177,7 @@ export function CsvImportDialog() {
     setRows([]);
     setCategory("");
     setSector("");
+    setZone("");
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -183,6 +186,7 @@ export function CsvImportDialog() {
       const res = await importLeadsFromCsv(rows, {
         category: category || undefined,
         sector: sector || undefined,
+        zone: zone || undefined,
       });
       if (res.ok) {
         const { imported, skipped } = JSON.parse(res.id ?? "{}") as {
@@ -293,7 +297,10 @@ export function CsvImportDialog() {
                   <Label>Catégorie (appliquée à tous)</Label>
                   <Select
                     value={category || "none"}
-                    onValueChange={(v: string) => setCategory(v === "none" ? "" : v)}
+                    onValueChange={(v: string) => {
+                      setCategory(v === "none" ? "" : v);
+                      setSector("");
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Aucune" />
@@ -320,13 +327,25 @@ export function CsvImportDialog() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Aucun</SelectItem>
-                      {LEAD_SECTORS.map((s) => (
+                      {(category
+                        ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS)
+                        : LEAD_SECTORS
+                      ).map((s) => (
                         <SelectItem key={s} value={s}>
                           {s}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Zone (appliquée à tous)</Label>
+                  <Input
+                    placeholder="Ex : Lille, Nord 59, Paris…"
+                    value={zone}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setZone(e.target.value)}
+                  />
                 </div>
               </div>
 

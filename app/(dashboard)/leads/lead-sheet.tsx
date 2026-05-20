@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Building2, Calendar, Mail, Phone, Star } from "lucide-react";
+import { Building2, Calendar, Globe, Mail, MapPin, Phone, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -30,6 +30,7 @@ export function LeadSheet({
   if (!lead) return null;
 
   const pappers = lead.enrichmentData?.pappers as Record<string, unknown> | undefined;
+  const website = lead.enrichmentData?.website as string | undefined;
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -79,6 +80,25 @@ export function LeadSheet({
                 </a>
               </div>
             )}
+            {website && (
+              <div className="flex items-center gap-2 text-sm">
+                <Globe className="size-4 shrink-0 text-muted-foreground" />
+                <a
+                  href={website.startsWith("http") ? website : `https://${website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-primary hover:underline"
+                >
+                  {website.replace(/^https?:\/\//, "")}
+                </a>
+              </div>
+            )}
+            {lead.zone && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="size-4 shrink-0" />
+                {lead.zone}
+              </div>
+            )}
             {lead.lastContactedAt && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="size-4 shrink-0" />
@@ -91,7 +111,7 @@ export function LeadSheet({
             )}
           </section>
 
-          {(lead.category || lead.sector) && (
+          {(lead.category || lead.sector || lead.zone) && (
             <>
               <Separator />
               <section className="space-y-2">
@@ -101,6 +121,12 @@ export function LeadSheet({
                 <div className="flex flex-wrap gap-2">
                   {lead.category && <Badge variant="secondary">{lead.category}</Badge>}
                   {lead.sector && <Badge variant="outline">{lead.sector}</Badge>}
+                  {lead.zone && (
+                    <Badge variant="outline" className="gap-1">
+                      <MapPin className="size-3" />
+                      {lead.zone}
+                    </Badge>
+                  )}
                 </div>
               </section>
             </>
