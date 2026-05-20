@@ -38,6 +38,17 @@ type CalPayload = {
   };
 };
 
+type LastAttempt = {
+  receivedAt: string;
+  trigger: string | null;
+  uid: string | null;
+  signatureProvided: string | null;
+  signatureValid: boolean;
+  result: string;
+  error?: string;
+};
+let lastAttempt: LastAttempt | null = null;
+
 export async function GET() {
   const configured = !!process.env.CAL_COM_WEBHOOK_SECRET;
   return NextResponse.json({
@@ -45,36 +56,52 @@ export async function GET() {
     secret_configured: configured,
     endpoint: "/api/cal/webhook",
     accepts: ["BOOKING_CREATED", "BOOKING_RESCHEDULED", "BOOKING_CANCELLED"],
+    lastAttempt,
   });
 }
 
 export async function POST(request: NextRequest) {
   const raw = await request.text();
+  const sig = request.headers.get("x-cal-signature-256");
+  const signatureValid = verifySignature(raw, sig);
+
+  let parsed: CalPayload = {};
+  try {
+    parsed = JSON.parse(raw) as CalPayload;
+  } catch {}
+
+  const trigger = parsed.triggerEvent ?? null;
+  const uid = parsed.payload?.uid ?? null;
+
+  const setLast = (result: string, error?: string) => {
+    lastAttempt = {
+      receivedAt: new Date().toISOString(),
+      trigger,
+      uid,
+      signatureProvided: sig,
+      signatureValid,
+      result,
+      error,
+    };
+  };
 
   logger.info(
     { headers: Object.fromEntries(request.headers), bodyPreview: raw.slice(0, 200) },
     "cal.com webhook received",
   );
 
-  if (!verifySignature(raw, request.headers.get("x-cal-signature-256"))) {
+  if (!signatureValid) {
+    setLast("rejected", "invalid signature");
     logger.warn("cal.com webhook: signature rejected");
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  let body: CalPayload;
-  try {
-    body = JSON.parse(raw) as CalPayload;
-  } catch {
-    return NextResponse.json({ error: "invalid json" }, { status: 400 });
-  }
-
-  const p = body.payload;
-  const trigger = body.triggerEvent;
-
-  logger.info({ trigger, uid: p?.uid, startTime: p?.startTime }, "cal.com payload parsed");
+  const p = parsed.payload;
+  logger.info({ trigger, uid, startTime: p?.startTime }, "cal.com payload parsed");
 
   if (!p?.uid || !p.startTime || !p.endTime) {
-    logger.warn({ p }, "cal.com webhook: missing uid/startTime/endTime — ignoring");
+    setLast("ignored", `missing uid/startTime/endTime (trigger=${trigger})`);
+    logger.warn({ p }, "cal.com webhook: missing fields — ignoring (likely PING)");
     return NextResponse.json({ received: true });
   }
 
@@ -85,6 +112,7 @@ export async function POST(request: NextRequest) {
 
   if (trigger === "BOOKING_CANCELLED") {
     await db.delete(calendarEvents).where(eq(calendarEvents.externalId, p.uid));
+    setLast("deleted");
     logger.info({ uid: p.uid }, "cal.com booking deleted");
     return NextResponse.json({ received: true });
   }
@@ -108,12 +136,21 @@ export async function POST(request: NextRequest) {
     clientId: match.clientId,
   };
 
-  if (existing) {
-    await db.update(calendarEvents).set(values).where(eq(calendarEvents.id, existing.id));
-    logger.info({ uid: p.uid }, "cal.com booking updated");
-  } else {
-    await db.insert(calendarEvents).values(values);
-    logger.info({ uid: p.uid }, "cal.com booking inserted");
+  try {
+    if (existing) {
+      await db.update(calendarEvents).set(values).where(eq(calendarEvents.id, existing.id));
+      setLast("updated");
+      logger.info({ uid: p.uid }, "cal.com booking updated");
+    } else {
+      await db.insert(calendarEvents).values(values);
+      setLast("inserted");
+      logger.info({ uid: p.uid }, "cal.com booking inserted");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setLast("db_error", msg);
+    logger.error({ err }, "cal.com webhook db error");
+    return NextResponse.json({ error: "db error", message: msg }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });
