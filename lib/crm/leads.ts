@@ -114,7 +114,7 @@ const richCsvRowSchema = z.object({
   email: z.string().email().nullable().optional().or(z.literal("")),
   phone: z.string().nullable().optional(),
   company: z.string().nullable().optional(),
-  enrichmentData: z.record(z.string()).optional(),
+  enrichmentData: z.record(z.string(), z.string()).optional(),
 });
 
 export async function importLeadsFromCsv(
