@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { MobileNavItem } from "@/components/shared/mobile-nav";
+import { NAV_ITEMS } from "@/components/shared/nav-items";
 import { cn } from "@/lib/utils";
 
-export function SidebarNav({ items }: { items: readonly MobileNavItem[] }) {
+export function SidebarNav() {
   const pathname = usePathname();
   return (
     <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
-      {items.map(({ href, label, icon: Icon }) => {
+      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
           <Link
