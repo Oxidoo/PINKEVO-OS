@@ -64,8 +64,8 @@ export default async function CampaignsPage() {
 
       <p className="text-sm text-muted-foreground">
         Les variables <code className="rounded bg-muted px-1 text-xs">{"{{prénom}}"}</code>,{" "}
-        <code className="rounded bg-muted px-1 text-xs">{"{{société}}"}</code>, etc. sont
-        remplacées automatiquement à l&apos;envoi.
+        <code className="rounded bg-muted px-1 text-xs">{"{{société}}"}</code>, etc. sont remplacées
+        automatiquement à l&apos;envoi.
       </p>
 
       <Tabs defaultValue="campaigns">
@@ -216,9 +216,7 @@ export default async function CampaignsPage() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {CATEGORY_LABELS[t.category] ?? t.category}
-                        </Badge>
+                        <Badge variant="outline">{CATEGORY_LABELS[t.category] ?? t.category}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{t.subject}</TableCell>
                       <TableCell className="text-right">

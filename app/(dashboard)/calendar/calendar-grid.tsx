@@ -25,6 +25,7 @@ export interface CalEvent {
 }
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const WEEKDAYS_SHORT = ["L", "M", "M", "J", "V", "S", "D"];
 
 export function CalendarGrid({ events }: { events: CalEvent[] }) {
   const today = new Date();
@@ -65,9 +66,10 @@ export function CalendarGrid({ events }: { events: CalEvent[] }) {
           {format(today, "MMMM yyyy", { locale: fr })}
         </div>
         <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border bg-border text-sm">
-          {WEEKDAYS.map((d) => (
-            <div key={d} className="bg-muted px-2 py-1.5 text-center text-xs font-medium">
-              {d}
+          {WEEKDAYS.map((d, i) => (
+            <div key={d} className="bg-muted px-1 py-1.5 text-center text-xs font-medium">
+              <span className="hidden sm:inline">{d}</span>
+              <span className="sm:hidden">{WEEKDAYS_SHORT[i]}</span>
             </div>
           ))}
           {days.map((day) => {
@@ -79,30 +81,41 @@ export function CalendarGrid({ events }: { events: CalEvent[] }) {
                 type="button"
                 key={day.toISOString()}
                 onClick={() => setSelected(day)}
-                className={`min-h-20 bg-card p-1.5 text-left align-top transition hover:bg-muted/50 ${
+                className={`min-h-14 bg-card p-1 text-left align-top transition hover:bg-muted/50 sm:min-h-20 sm:p-1.5 ${
                   isSameMonth(day, today) ? "" : "text-muted-foreground/50"
                 } ${isSel ? "ring-2 ring-brand-400 ring-inset" : ""}`}
               >
                 <span
-                  className={`inline-flex size-6 items-center justify-center rounded-full text-xs ${
+                  className={`inline-flex size-5 items-center justify-center rounded-full text-[11px] sm:size-6 sm:text-xs ${
                     isToday ? "bg-brand-500 font-semibold text-white" : ""
                   }`}
                 >
                   {format(day, "d")}
                 </span>
-                <div className="mt-1 space-y-0.5">
-                  {dayEvents.slice(0, 2).map((e) => (
-                    <div
-                      key={e.id}
-                      className="truncate rounded bg-brand-100 px-1 py-0.5 text-[10px] text-brand-800"
-                    >
-                      {format(new Date(e.startAt), "HH:mm")} {e.title}
+                {dayEvents.length > 0 && (
+                  <>
+                    <div className="mt-1 hidden space-y-0.5 sm:block">
+                      {dayEvents.slice(0, 2).map((e) => (
+                        <div
+                          key={e.id}
+                          className="truncate rounded bg-brand-100 px-1 py-0.5 text-[10px] text-brand-800"
+                        >
+                          {format(new Date(e.startAt), "HH:mm")} {e.title}
+                        </div>
+                      ))}
+                      {dayEvents.length > 2 && (
+                        <div className="text-[10px] text-muted-foreground">
+                          +{dayEvents.length - 2}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {dayEvents.length > 2 && (
-                    <div className="text-[10px] text-muted-foreground">+{dayEvents.length - 2}</div>
-                  )}
-                </div>
+                    <div className="mt-1 flex flex-wrap gap-0.5 sm:hidden">
+                      {dayEvents.slice(0, 3).map((e) => (
+                        <span key={e.id} className="size-1.5 rounded-full bg-brand-500" />
+                      ))}
+                    </div>
+                  </>
+                )}
               </button>
             );
           })}

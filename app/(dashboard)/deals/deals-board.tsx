@@ -52,7 +52,7 @@ function Column({ id, label, deals }: { id: string; label: string; deals: Deal[]
   const { setNodeRef, isOver } = useDroppable({ id });
   const total = deals.reduce((s, d) => s + Number(d.value), 0);
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className="flex w-64 shrink-0 flex-col sm:w-72">
       <div className="mb-2 flex items-center justify-between px-1">
         <span className="text-sm font-medium">{label}</span>
         <Badge variant="secondary" className="tabular-nums">
@@ -61,7 +61,7 @@ function Column({ id, label, deals }: { id: string; label: string; deals: Deal[]
       </div>
       <div
         ref={setNodeRef}
-        className={`flex min-h-[55vh] flex-col gap-2 rounded-xl border border-dashed p-2 transition ${
+        className={`flex min-h-[40vh] flex-col gap-2 rounded-xl border border-dashed p-2 transition sm:min-h-[55vh] ${
           isOver ? "border-brand-400 bg-brand-50/50" : ""
         }`}
       >
@@ -119,7 +119,7 @@ export function DealsBoard({ deals }: { deals: Deal[] }) {
         </div>
       </div>
       <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
           {COLUMNS.map((col) => (
             <Column
               key={col.id}

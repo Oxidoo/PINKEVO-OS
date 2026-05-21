@@ -31,9 +31,7 @@ export function LeadCreateDialog() {
   const [sector, setSector] = useState("");
   const [pending, start] = useTransition();
 
-  const sectorsForCategory = category
-    ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS)
-    : LEAD_SECTORS;
+  const sectorsForCategory = category ? (CATEGORY_SECTORS[category] ?? LEAD_SECTORS) : LEAD_SECTORS;
 
   function handleCategoryChange(v: string) {
     setCategory(v);

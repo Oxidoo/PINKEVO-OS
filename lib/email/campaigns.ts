@@ -27,20 +27,14 @@ export async function getArchivedCampaigns() {
 
 export async function archiveCampaign(id: string): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager", "sales"]);
-  await db
-    .update(emailCampaigns)
-    .set({ archivedAt: new Date() })
-    .where(eq(emailCampaigns.id, id));
+  await db.update(emailCampaigns).set({ archivedAt: new Date() }).where(eq(emailCampaigns.id, id));
   revalidatePath("/campaigns");
   return { ok: true };
 }
 
 export async function unarchiveCampaign(id: string): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager", "sales"]);
-  await db
-    .update(emailCampaigns)
-    .set({ archivedAt: null })
-    .where(eq(emailCampaigns.id, id));
+  await db.update(emailCampaigns).set({ archivedAt: null }).where(eq(emailCampaigns.id, id));
   revalidatePath("/campaigns");
   return { ok: true };
 }
@@ -89,10 +83,9 @@ export async function createEmailTemplate(formData: FormData): Promise<ActionRes
 
   // Extract variables used in subject + body
   const variableRegex = /\{\{[^}]+\}\}/gi;
-  const usedVars = Array.from(new Set([
-    ...(subject.match(variableRegex) ?? []),
-    ...(body.match(variableRegex) ?? []),
-  ]));
+  const usedVars = Array.from(
+    new Set([...(subject.match(variableRegex) ?? []), ...(body.match(variableRegex) ?? [])]),
+  );
 
   await db.insert(emailTemplates).values({
     slug,
@@ -117,10 +110,9 @@ export async function updateEmailTemplate(id: string, formData: FormData): Promi
   const { name, subject, body, category } = parsed.data;
 
   const variableRegex = /\{\{[^}]+\}\}/gi;
-  const usedVars = Array.from(new Set([
-    ...(subject.match(variableRegex) ?? []),
-    ...(body.match(variableRegex) ?? []),
-  ]));
+  const usedVars = Array.from(
+    new Set([...(subject.match(variableRegex) ?? []), ...(body.match(variableRegex) ?? [])]),
+  );
 
   await db
     .update(emailTemplates)
@@ -184,4 +176,3 @@ export async function sendCampaign(id: string): Promise<ActionResult> {
   revalidatePath("/campaigns");
   return result;
 }
-

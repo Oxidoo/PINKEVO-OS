@@ -26,8 +26,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import type { EmailTemplate } from "@/lib/db/schema/communications";
 import { createCampaign } from "@/lib/email/campaigns";
-import { LinkInsertForm } from "./link-insert-form";
 import { LEAD_CATEGORIES, LEAD_SECTORS } from "../leads/leads-filters";
+import { LinkInsertForm } from "./link-insert-form";
 
 const VARIABLES = [
   "{{prénom}}",
@@ -133,8 +133,8 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
         <DialogHeader>
           <DialogTitle>Nouvelle campagne</DialogTitle>
           <DialogDescription>
-            Laissez la date vide pour un envoi manuel. Les variables sont remplacées
-            automatiquement à l&apos;envoi.
+            Laissez la date vide pour un envoi manuel. Les variables sont remplacées automatiquement
+            à l&apos;envoi.
           </DialogDescription>
         </DialogHeader>
         <form action={onSubmit} className="space-y-4">
@@ -238,7 +238,7 @@ export function CampaignCreateDialog({ templates = [] }: Props) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="camp-category">Catégorie de leads</Label>
               <Select
