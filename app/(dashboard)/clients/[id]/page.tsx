@@ -18,7 +18,7 @@ import { ContactDialog } from "./contact-dialog";
 const STATUS_LABEL: Record<string, string> = {
   prospect: "Prospect",
   active: "Actif",
-  churned: "Churned",
+  churned: "Archivé",
 };
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +58,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
             <ClientRowActions
               client={client}
               align="end"
+              onDeleteRedirectTo="/clients"
               trigger={
                 <Button variant="outline" size="icon" aria-label="Actions client">
                   <MoreHorizontal className="size-4" />
