@@ -1,7 +1,8 @@
 import "server-only";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { audits, websites } from "@/lib/db/schema";
+import type { PsiResult } from "@/lib/integrations/psi/client";
 
 export async function getWebsitesWithScores() {
   const all = await db.select().from(websites).orderBy(desc(websites.createdAt));
@@ -38,4 +39,63 @@ export async function getWebsiteDetail(id: string) {
     .orderBy(desc(audits.runAt))
     .limit(20);
   return { website, audits: history };
+}
+
+function extractPsi(rawData: Record<string, unknown> | null): PsiResult | null {
+  if (!rawData) return null;
+  const psi = (rawData as { psi?: unknown }).psi;
+  if (!psi || typeof psi !== "object") return null;
+  // Older audits may not have opportunities/failures/full metrics. Normalize.
+  const p = psi as Partial<PsiResult> & { metrics?: Partial<PsiResult["metrics"]> };
+  return {
+    strategy: p.strategy ?? "mobile",
+    performance: p.performance ?? 0,
+    seo: p.seo ?? 0,
+    accessibility: p.accessibility ?? 0,
+    bestPractices: p.bestPractices ?? 0,
+    metrics: {
+      lcp: p.metrics?.lcp ?? 0,
+      cls: p.metrics?.cls ?? 0,
+      tbt: p.metrics?.tbt ?? 0,
+      fcp: p.metrics?.fcp ?? 0,
+      si: p.metrics?.si ?? 0,
+      tti: p.metrics?.tti ?? 0,
+    },
+    opportunities: p.opportunities ?? [],
+    failures: p.failures ?? [],
+    mock: p.mock,
+  };
+}
+
+export async function getLatestPsi(
+  websiteId: string,
+): Promise<{ mobile: PsiResult | null; desktop: PsiResult | null; lastRunAt: Date | null }> {
+  const rows = await db
+    .select()
+    .from(audits)
+    .where(and(eq(audits.websiteId, websiteId), eq(audits.type, "performance")))
+    .orderBy(desc(audits.runAt))
+    .limit(20);
+
+  let mobile: PsiResult | null = null;
+  let desktop: PsiResult | null = null;
+  let lastRunAt: Date | null = null;
+  for (const row of rows) {
+    const psi = extractPsi(row.rawData);
+    if (!psi) continue;
+    if (!lastRunAt) lastRunAt = row.runAt;
+    if (psi.strategy === "mobile" && !mobile) mobile = psi;
+    else if (psi.strategy === "desktop" && !desktop) desktop = psi;
+    if (mobile && desktop) break;
+  }
+  return { mobile, desktop, lastRunAt };
+}
+
+export async function getPerfHistory(websiteId: string, limit = 12) {
+  return db
+    .select({ runAt: audits.runAt, score: audits.score, rawData: audits.rawData })
+    .from(audits)
+    .where(and(eq(audits.websiteId, websiteId), eq(audits.type, "performance")))
+    .orderBy(desc(audits.runAt))
+    .limit(limit);
 }

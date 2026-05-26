@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { LayoutGrid, List, MoreHorizontal, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ import {
 import type { Client } from "@/lib/db/schema";
 import { formatCurrency } from "@/lib/format";
 import { ClientForm } from "./client-form";
+import { ClientRowActions } from "./client-row-actions";
 
 const STATUS_LABEL: Record<string, string> = {
   prospect: "Prospect",
@@ -131,11 +132,12 @@ export function ClientsView({ clients }: { clients: Client[] }) {
                 <TableHead>Statut</TableHead>
                 <TableHead className="text-right">MRR</TableHead>
                 <TableHead className="hidden md:table-cell">Tags</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((c) => (
-                <TableRow key={c.id} className="cursor-pointer">
+                <TableRow key={c.id}>
                   <TableCell className="font-medium">
                     <Link href={`/clients/${c.id}`} className="hover:underline">
                       {c.name}
@@ -155,6 +157,21 @@ export function ClientsView({ clients }: { clients: Client[] }) {
                       ))}
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <ClientRowActions
+                      client={c}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Actions"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      }
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -163,10 +180,13 @@ export function ClientsView({ clients }: { clients: Client[] }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((c) => (
-            <Link key={c.id} href={`/clients/${c.id}`}>
-              <Card className="h-full transition hover:border-brand-300 hover:shadow-sm">
+            <Card
+              key={c.id}
+              className="relative h-full transition hover:border-brand-300 hover:shadow-sm"
+            >
+              <Link href={`/clients/${c.id}`} className="block">
                 <CardHeader className="flex flex-row items-start justify-between">
-                  <CardTitle className="text-base">{c.name}</CardTitle>
+                  <CardTitle className="pr-8 text-base">{c.name}</CardTitle>
                   <Badge variant={STATUS_VARIANT[c.status]}>{STATUS_LABEL[c.status]}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -175,8 +195,18 @@ export function ClientsView({ clients }: { clients: Client[] }) {
                     {formatCurrency(c.mrr)} <span className="text-xs font-normal">/ mois</span>
                   </p>
                 </CardContent>
-              </Card>
-            </Link>
+              </Link>
+              <div className="absolute right-2 top-2">
+                <ClientRowActions
+                  client={c}
+                  trigger={
+                    <Button variant="ghost" size="icon" aria-label="Actions">
+                      <MoreHorizontal className="size-4" />
+                    </Button>
+                  }
+                />
+              </div>
+            </Card>
           ))}
         </div>
       )}

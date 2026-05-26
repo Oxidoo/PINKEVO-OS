@@ -7,7 +7,8 @@ import { executeAgentRun } from "@/lib/ai/runs";
 import { requireRole } from "@/lib/auth/server";
 import type { ActionResult } from "@/lib/crm/clients";
 import { db } from "@/lib/db/client";
-import { agentRuns, agents, websites } from "@/lib/db/schema";
+import { agentRuns, agents, audits, websites } from "@/lib/db/schema";
+import { runPsi } from "@/lib/integrations/psi/client";
 
 const websiteSchema = z.object({
   clientId: z.string().uuid(),
@@ -72,4 +73,47 @@ export async function runFullAudit(websiteId: string): Promise<ActionResult> {
 
   revalidatePath(`/websites/${websiteId}`);
   return { ok: true, id: String(runIds.length) };
+}
+
+/**
+ * Quick PSI scan : runs PageSpeed Insights for mobile + desktop synchronously
+ * and stores both as `performance` audits. Free, ~10–30s, no agents required.
+ */
+export async function runQuickPsiScan(websiteId: string): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "producer"]);
+  const [site] = await db.select().from(websites).where(eq(websites.id, websiteId)).limit(1);
+  if (!site) return { ok: false, error: "Site introuvable" };
+
+  const [mobile, desktop] = await Promise.all([
+    runPsi(site.url, "mobile"),
+    runPsi(site.url, "desktop"),
+  ]);
+
+  await db.insert(audits).values([
+    {
+      websiteId,
+      type: "performance",
+      score: mobile.performance,
+      triggeredBy: profile.id,
+      rawData: { psi: mobile, source: "quick_scan", strategy: "mobile" },
+    },
+    {
+      websiteId,
+      type: "performance",
+      score: desktop.performance,
+      triggeredBy: profile.id,
+      rawData: { psi: desktop, source: "quick_scan", strategy: "desktop" },
+    },
+    {
+      websiteId,
+      type: "seo",
+      score: mobile.seo,
+      triggeredBy: profile.id,
+      rawData: { psi: mobile, source: "quick_scan", strategy: "mobile" },
+    },
+  ]);
+
+  revalidatePath(`/websites/${websiteId}`);
+  revalidatePath("/websites");
+  return { ok: true, id: "2" };
 }

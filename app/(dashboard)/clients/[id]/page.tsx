@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ArrowLeft, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Mail, MoreHorizontal, Phone } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/server";
 import { getClientDetail } from "@/lib/crm/clients";
 import { formatCurrency } from "@/lib/format";
+import { ClientRowActions } from "../client-row-actions";
 import { ActivityComposer } from "./activity-composer";
 import { ContactDialog } from "./contact-dialog";
 
@@ -54,6 +55,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
                 {formatCurrency(client.lifetimeValue)}
               </p>
             </div>
+            <ClientRowActions
+              client={client}
+              align="end"
+              trigger={
+                <Button variant="outline" size="icon" aria-label="Actions client">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              }
+            />
           </div>
         </div>
         {client.tags.length > 0 && (
