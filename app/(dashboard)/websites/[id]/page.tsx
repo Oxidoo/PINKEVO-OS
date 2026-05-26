@@ -3,9 +3,11 @@ import { fr } from "date-fns/locale";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -17,8 +19,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUser, requireUser } from "@/lib/auth/server";
 import { fetchGscSummary } from "@/lib/integrations/google/gsc";
-import { getWebsiteDetail } from "@/lib/websites/queries";
+import { scanOnPage } from "@/lib/websites/onpage-scan";
+import { getLatestPsi, getWebsiteDetail } from "@/lib/websites/queries";
 import { AuditButton } from "../audit-button";
+import { QuickScanButton } from "../quick-scan-button";
+import { InsightsTab } from "./insights-tab";
 
 export default async function WebsiteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -27,7 +32,10 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
   const data = await getWebsiteDetail(id);
   if (!data) notFound();
   const { website, audits } = data;
-  const gsc = user ? await fetchGscSummary(user.id, website.url) : null;
+  const [gsc, psi] = await Promise.all([
+    user ? fetchGscSummary(user.id, website.url) : Promise.resolve(null),
+    getLatestPsi(website.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,31 +46,43 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
           </Link>
         </Button>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{website.name}</h1>
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
+              {website.name}
+            </h1>
             <a
               href={website.url}
               target="_blank"
               rel="noreferrer"
-              className="text-sm text-brand-600 hover:underline"
+              className="break-all text-sm text-brand-600 hover:underline"
             >
               {website.url}
             </a>
           </div>
-          <AuditButton websiteId={website.id} />
+          <div className="flex flex-wrap items-center gap-2">
+            <QuickScanButton websiteId={website.id} />
+            <AuditButton websiteId={website.id} />
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="audits">
+      <Tabs defaultValue="insights">
         <TabsList>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="audits">Audits ({audits.length})</TabsTrigger>
           <TabsTrigger value="gsc">Search Console</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="insights" className="mt-6">
+          <Suspense fallback={<InsightsSkeleton />}>
+            <InsightsAsync website={website} psi={psi} />
+          </Suspense>
+        </TabsContent>
+
         <TabsContent value="audits" className="mt-6">
           {audits.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Aucun audit. Lancez un audit complet (SEO + perf).
+              Aucun audit. Lancez un re-scan ou un audit complet (SEO + perf).
             </p>
           ) : (
             <div className="rounded-xl border">
@@ -168,6 +188,37 @@ export default async function WebsiteDetailPage({ params }: { params: Promise<{ 
           )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+async function InsightsAsync({
+  website,
+  psi,
+}: {
+  website: { id: string; url: string };
+  psi: Awaited<ReturnType<typeof getLatestPsi>>;
+}) {
+  const onPage = await scanOnPage(website.url);
+  return (
+    <InsightsTab
+      mobilePsi={psi.mobile}
+      desktopPsi={psi.desktop}
+      lastRunAt={psi.lastRunAt}
+      onPage={onPage}
+    />
+  );
+}
+
+function InsightsSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Skeleton className="h-56 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-xl" />
+      </div>
+      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-60 w-full rounded-xl" />
     </div>
   );
 }

@@ -46,6 +46,32 @@ export async function updateClient(id: string, formData: FormData): Promise<Acti
     .where(eq(clients.id, id));
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
+  revalidatePath("/deals");
+  revalidatePath("/websites");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  return { ok: true, id };
+}
+
+export async function archiveClient(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager"]);
+  await db.update(clients).set({ status: "churned" }).where(eq(clients.id, id));
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${id}`);
+  revalidatePath("/deals");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  return { ok: true, id };
+}
+
+export async function unarchiveClient(id: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager"]);
+  await db.update(clients).set({ status: "active" }).where(eq(clients.id, id));
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${id}`);
+  revalidatePath("/deals");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
   return { ok: true, id };
 }
 
@@ -53,6 +79,10 @@ export async function deleteClient(id: string): Promise<ActionResult> {
   await requireRole(["owner", "admin"]);
   await db.delete(clients).where(eq(clients.id, id));
   revalidatePath("/clients");
+  revalidatePath("/deals");
+  revalidatePath("/websites");
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
