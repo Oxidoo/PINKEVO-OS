@@ -6,24 +6,20 @@ export interface LlmJsonResult<T> {
   data: T;
   tokensInput: number;
   tokensOutput: number;
-  mock: boolean;
 }
 
 /**
- * Structured LLM call with graceful fallback. When no provider key is set,
- * `mockData` is returned with zero token usage so agent flows stay testable.
+ * Structured LLM call. Throws `LlmUnavailableError` from provider.ts when the
+ * required API key is missing — the executor catches it and marks the run as
+ * failed with the message. No silent mock fallback : results are always real.
  */
 export async function llmJson<T>(args: {
   model: string;
   schema: z.ZodType<T>;
   system: string;
   prompt: string;
-  mockData: T;
 }): Promise<LlmJsonResult<T>> {
   const model = resolveModel(args.model);
-  if (!model) {
-    return { data: args.mockData, tokensInput: 0, tokensOutput: 0, mock: true };
-  }
   const { object, usage } = await generateObject({
     model,
     schema: args.schema,
@@ -38,5 +34,5 @@ export async function llmJson<T>(args: {
     (usage as { outputTokens?: number; completionTokens?: number }).outputTokens ??
     (usage as { completionTokens?: number }).completionTokens ??
     0;
-  return { data: object, tokensInput: inputTokens, tokensOutput: outputTokens, mock: false };
+  return { data: object, tokensInput: inputTokens, tokensOutput: outputTokens };
 }

@@ -37,21 +37,12 @@ export const seoAuditor: AgentHandler<typeof inputSchema> = {
       runPsi(site.url, "desktop"),
     ]);
 
-    const { data, tokensInput, tokensOutput, mock } = await llmJson({
+    const { data, tokensInput, tokensOutput } = await llmJson({
       model,
       schema: auditSchema,
       system:
         "Tu es un consultant SEO senior. À partir des données PSI/SEO, donne un score global et 10 actions priorisées par impact × effort.",
       prompt: `Site: ${site.url}\nMobile: ${JSON.stringify(mobile)}\nDesktop: ${JSON.stringify(desktop)}`,
-      mockData: {
-        score: Math.round((mobile.seo + desktop.seo) / 2),
-        criticalIssues: 3,
-        actions: [
-          { title: "Optimiser les balises title/meta", impact: "fort", effort: "faible" },
-          { title: "Améliorer le maillage interne", impact: "moyen", effort: "moyen" },
-          { title: "Corriger les erreurs d'indexation", impact: "fort", effort: "moyen" },
-        ],
-      },
     });
 
     await db.insert(audits).values({
@@ -62,7 +53,7 @@ export const seoAuditor: AgentHandler<typeof inputSchema> = {
     });
 
     return {
-      output: { ...data, mock },
+      output: { ...data },
       tokensInput,
       tokensOutput,
       summary: `Score SEO ${data.score}/100 — ${data.criticalIssues} issues critiques`,

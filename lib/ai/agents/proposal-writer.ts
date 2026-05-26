@@ -48,26 +48,12 @@ export const proposalWriter: AgentHandler<typeof inputSchema> = {
       targetName = l?.company ?? (`${l?.firstName ?? ""}`.trim() || targetName);
     }
 
-    const { data, tokensInput, tokensOutput, mock } = await llmJson({
+    const { data, tokensInput, tokensOutput } = await llmJson({
       model,
       schema: proposalSchema,
       system:
         "Tu es un rédacteur senior de propositions commerciales pour l'agence PINKEVO. Structure : titre, contexte, objectifs, livrables, planning, prix setup + récurrent (en euros, réalistes pour une PME française).",
       prompt: `Service: ${SERVICE_LABEL[input.service]}\nCible: ${targetName}\nObjectifs: ${input.objectives}`,
-      mockData: {
-        title: `${SERVICE_LABEL[input.service]} — ${targetName}`,
-        context: `Accompagnement ${SERVICE_LABEL[input.service]} pour ${targetName}.`,
-        objectives: input.objectives.split(",").map((o) => o.trim()),
-        deliverables: [
-          "Audit initial",
-          "Plan d'action priorisé",
-          "Mise en œuvre",
-          "Reporting mensuel",
-        ],
-        timeline: "6 à 8 semaines",
-        totalSetup: input.service === "pack_agence" ? 6500 : 2500,
-        totalRecurring: input.service === "seo_recurrent" ? 990 : 0,
-      },
     });
 
     const signatureToken =
@@ -104,7 +90,6 @@ export const proposalWriter: AgentHandler<typeof inputSchema> = {
         proposalId: row?.id,
         totalSetup: data.totalSetup,
         totalRecurring: data.totalRecurring,
-        mock,
       },
       tokensInput,
       tokensOutput,

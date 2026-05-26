@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getModelOption } from "@/lib/ai/models";
+import { availableProviders } from "@/lib/ai/provider";
 import { getAgentRuns } from "@/lib/ai/runs";
 import { requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
@@ -31,6 +33,9 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
     .limit(1);
   if (!agent) notFound();
   const runs = await getAgentRuns(agent.id);
+  const providers = availableProviders();
+  const noLlm = !providers.anthropic && !providers.openai;
+  const modelLabel = getModelOption(agent.model)?.label ?? agent.model;
 
   return (
     <div className="flex flex-col gap-6">
@@ -46,10 +51,14 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
             <p className="text-sm text-muted-foreground">{agent.description}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="font-mono text-xs">
-              {agent.model}
+            <Badge variant="outline" className="text-xs">
+              {modelLabel}
             </Badge>
-            <LaunchDialog slug={agent.slug} disabled={!agent.enabled} />
+            <LaunchDialog
+              slug={agent.slug}
+              disabled={!agent.enabled || noLlm}
+              defaultModel={agent.model}
+            />
           </div>
         </div>
       </div>
@@ -65,11 +74,21 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
             <p className="text-sm text-muted-foreground">Aucune exécution.</p>
           ) : (
             runs.map((r) => {
-              const out = (r.output ?? {}) as { summary?: string };
+              const out = (r.output ?? {}) as { summary?: string; model?: string };
+              const runModel = out.model
+                ? (getModelOption(out.model)?.label ?? out.model)
+                : null;
               return (
                 <div key={r.id} className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant={STATUS_VARIANT[r.status] ?? "secondary"}>{r.status}</Badge>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={STATUS_VARIANT[r.status] ?? "secondary"}>{r.status}</Badge>
+                      {runModel && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {runModel}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       {format(r.createdAt, "d MMM HH:mm", { locale: fr })}
                     </span>

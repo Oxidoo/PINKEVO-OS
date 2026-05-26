@@ -29,21 +29,12 @@ export const leadProspector: AgentHandler<typeof inputSchema> = {
   run: async (input, model, ctx) => {
     const places = await searchPlaces(input.keyword, input.city, input.count);
 
-    const { data, tokensInput, tokensOutput, mock } = await llmJson({
+    const { data, tokensInput, tokensOutput } = await llmJson({
       model,
       schema: extractionSchema,
       system:
         "Tu es un expert en prospection B2B locale. À partir d'une liste d'entreprises, déduis pour chacune un email de contact plausible, un téléphone et le nom probable du dirigeant. Réponds en JSON strict.",
       prompt: `Entreprises trouvées:\n${JSON.stringify(places, null, 2)}`,
-      mockData: {
-        contacts: places.map((p) => ({
-          company: p.name,
-          email:
-            p.website?.replace(/^https?:\/\/(www\.)?/, "contact@").replace(/\/.*$/, "") ?? null,
-          phone: p.phone ?? null,
-          contactName: null,
-        })),
-      },
     });
 
     const toInsert = data.contacts
@@ -62,7 +53,7 @@ export const leadProspector: AgentHandler<typeof inputSchema> = {
     if (toInsert.length > 0) await db.insert(leads).values(toInsert);
 
     return {
-      output: { createdLeads: toInsert.length, places: places.length, mock },
+      output: { createdLeads: toInsert.length, places: places.length },
       tokensInput,
       tokensOutput,
       summary: `${toInsert.length} leads créés pour « ${input.keyword} » à ${input.city}`,
