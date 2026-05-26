@@ -24,20 +24,12 @@ export const leadQualifier: AgentHandler<typeof inputSchema> = {
 
     const company = lead.company ? await searchCompany(lead.company) : null;
 
-    const { data, tokensInput, tokensOutput, mock } = await llmJson({
+    const { data, tokensInput, tokensOutput } = await llmJson({
       model,
       schema: scoreSchema,
       system:
         "Tu es un expert en qualification de leads pour une agence digitale (sites web, SEO). Évalue le fit de 0 à 100 et justifie en 2-4 raisons concises.",
       prompt: `Lead:\n${JSON.stringify(lead)}\n\nDonnées entreprise (Pappers):\n${JSON.stringify(company)}`,
-      mockData: {
-        score: company?.revenue && company.revenue > 300_000 ? 74 : 48,
-        reasons: [
-          "Entreprise locale avec présence web améliorable",
-          company?.headcount ? `Effectif ~${company.headcount}` : "Effectif inconnu",
-        ],
-        recommendation: "contacter",
-      },
     });
 
     await db
@@ -54,7 +46,7 @@ export const leadQualifier: AgentHandler<typeof inputSchema> = {
       .where(eq(leads.id, input.leadId));
 
     return {
-      output: { ...data, mock },
+      output: { ...data },
       tokensInput,
       tokensOutput,
       summary: `Score ${data.score}/100 — ${data.recommendation}`,

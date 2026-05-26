@@ -4,11 +4,15 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getHandler } from "@/lib/ai/agents";
 import { computeCostUsd, providerForModel } from "@/lib/ai/cost";
+import { isSupportedModel } from "@/lib/ai/models";
+import { LlmUnavailableError } from "@/lib/ai/provider";
 import { requireRole } from "@/lib/auth/server";
 import type { ActionResult } from "@/lib/crm/clients";
 import { db } from "@/lib/db/client";
 import { agentRuns, agents, apiUsage } from "@/lib/db/schema";
 import { logger } from "@/lib/logger";
+
+const MODEL_OVERRIDE_KEY = "__modelOverride";
 
 /** Core executor — runs the agent handler and finalises the agent_runs row. */
 export async function executeAgentRun(runId: string): Promise<void> {
@@ -29,19 +33,26 @@ export async function executeAgentRun(runId: string): Promise<void> {
   const startedAt = new Date();
   await db.update(agentRuns).set({ status: "running", startedAt }).where(eq(agentRuns.id, runId));
 
+  // Pull the optional per-run model override stashed in input metadata.
+  const rawInput = (run.input ?? {}) as Record<string, unknown>;
+  const override = rawInput[MODEL_OVERRIDE_KEY];
+  const effectiveModel =
+    typeof override === "string" && isSupportedModel(override) ? override : agent.model;
+  const { [MODEL_OVERRIDE_KEY]: _, ...userInput } = rawInput;
+
   try {
-    const parsed = handler.inputSchema.parse(run.input ?? {});
-    const result = await handler.run(parsed, agent.model, {
+    const parsed = handler.inputSchema.parse(userInput);
+    const result = await handler.run(parsed, effectiveModel, {
       triggeredBy: run.triggeredBy,
     });
     const finishedAt = new Date();
-    const cost = computeCostUsd(agent.model, result.tokensInput, result.tokensOutput);
+    const cost = computeCostUsd(effectiveModel, result.tokensInput, result.tokensOutput);
 
     await db
       .update(agentRuns)
       .set({
         status: "success",
-        output: { ...result.output, summary: result.summary },
+        output: { ...result.output, summary: result.summary, model: effectiveModel },
         tokensInput: result.tokensInput,
         tokensOutput: result.tokensOutput,
         costUsd: String(cost),
@@ -53,21 +64,27 @@ export async function executeAgentRun(runId: string): Promise<void> {
     if (result.tokensInput + result.tokensOutput > 0) {
       const today = finishedAt.toISOString().slice(0, 10);
       await db.insert(apiUsage).values({
-        provider: providerForModel(agent.model),
+        provider: providerForModel(effectiveModel),
         date: today,
         tokens: result.tokensInput + result.tokensOutput,
         requests: 1,
         costUsd: String(cost),
-        rawData: { agentSlug: agent.slug, runId },
+        rawData: { agentSlug: agent.slug, runId, model: effectiveModel },
       });
     }
   } catch (err) {
     logger.error({ err, runId }, "agent run failed");
+    const message =
+      err instanceof LlmUnavailableError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : "Erreur inconnue";
     await db
       .update(agentRuns)
       .set({
         status: "failed",
-        error: err instanceof Error ? err.message : "Erreur inconnue",
+        error: message,
         finishedAt: new Date(),
       })
       .where(eq(agentRuns.id, runId));
@@ -84,6 +101,7 @@ export async function executeAgentRun(runId: string): Promise<void> {
 export async function triggerAgentRun(
   slug: string,
   input: Record<string, unknown>,
+  options?: { modelOverride?: string },
 ): Promise<ActionResult> {
   const profile = await requireRole(["owner", "admin", "manager", "sales"]);
   const [agent] = await db
@@ -94,9 +112,17 @@ export async function triggerAgentRun(
   if (!agent) return { ok: false, error: "Agent introuvable" };
   if (!agent.enabled) return { ok: false, error: "Agent désactivé" };
 
+  const storedInput: Record<string, unknown> = { ...input };
+  if (options?.modelOverride) {
+    if (!isSupportedModel(options.modelOverride)) {
+      return { ok: false, error: `Modèle ${options.modelOverride} non supporté` };
+    }
+    storedInput[MODEL_OVERRIDE_KEY] = options.modelOverride;
+  }
+
   const [run] = await db
     .insert(agentRuns)
-    .values({ agentId: agent.id, triggeredBy: profile.id, input, status: "queued" })
+    .values({ agentId: agent.id, triggeredBy: profile.id, input: storedInput, status: "queued" })
     .returning({ id: agentRuns.id });
   if (!run) return { ok: false, error: "Création du run échouée" };
 
@@ -116,6 +142,9 @@ export async function updateAgentConfig(
   data: { systemPrompt: string; model: string; enabled: boolean },
 ): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager"]);
+  if (!isSupportedModel(data.model)) {
+    return { ok: false, error: `Modèle ${data.model} non supporté` };
+  }
   await db
     .update(agents)
     .set({ systemPrompt: data.systemPrompt, model: data.model, enabled: data.enabled })

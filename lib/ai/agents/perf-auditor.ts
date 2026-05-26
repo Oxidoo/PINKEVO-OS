@@ -32,24 +32,12 @@ export const perfAuditor: AgentHandler<typeof inputSchema> = {
       runPsi(site.url, "desktop"),
     ]);
 
-    const { data, tokensInput, tokensOutput, mock } = await llmJson({
+    const { data, tokensInput, tokensOutput } = await llmJson({
       model,
       schema: perfSchema,
       system:
         "Tu es un expert performance web. Identifie les quick wins (images, JS bloquant, fonts) et résume en français clair pour le client.",
       prompt: `Site: ${site.url}\nMobile: ${JSON.stringify(mobile)}\nDesktop: ${JSON.stringify(desktop)}`,
-      mockData: {
-        perfMobile: mobile.performance,
-        perfDesktop: desktop.performance,
-        topActions: [
-          "Compresser et servir les images en WebP",
-          "Différer le JavaScript non critique",
-          "Précharger les polices web",
-          "Activer la mise en cache navigateur",
-          "Minifier CSS/JS",
-        ],
-        summaryFr: `Performance mobile ${mobile.performance}/100, desktop ${desktop.performance}/100. Quelques optimisations rapides peuvent gagner 15-25 points sur mobile.`,
-      },
     });
 
     await db.insert(audits).values({
@@ -60,7 +48,7 @@ export const perfAuditor: AgentHandler<typeof inputSchema> = {
     });
 
     return {
-      output: { ...data, mock },
+      output: { ...data },
       tokensInput,
       tokensOutput,
       summary: `Perf mobile ${data.perfMobile} / desktop ${data.perfDesktop}`,

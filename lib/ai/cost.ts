@@ -1,6 +1,7 @@
 /** USD per 1M tokens. Approximate public pricing — adjust as needed. */
 const PRICING: Record<string, { input: number; output: number }> = {
   "claude-opus-4-5": { input: 15, output: 75 },
+  "claude-sonnet-4-5": { input: 3, output: 15 },
   "claude-haiku-4-5": { input: 1, output: 5 },
   "gpt-4o": { input: 2.5, output: 10 },
   "gpt-4o-mini": { input: 0.15, output: 0.6 },

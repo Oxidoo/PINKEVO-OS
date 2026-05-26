@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { SUPPORTED_MODELS, getModelOption } from "@/lib/ai/models";
 import { triggerAgentRun } from "@/lib/ai/runs";
 
 type Field =
@@ -55,18 +56,35 @@ const FIELDS: Record<string, Field[]> = {
   perf_auditor: [{ kind: "text", name: "websiteId", label: "ID du site (UUID)" }],
 };
 
-export function LaunchDialog({ slug, disabled }: { slug: string; disabled?: boolean }) {
+const DEFAULT_VALUE = "__default__";
+
+export function LaunchDialog({
+  slug,
+  disabled,
+  defaultModel,
+}: {
+  slug: string;
+  disabled?: boolean;
+  defaultModel: string;
+}) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [modelChoice, setModelChoice] = useState<string>(DEFAULT_VALUE);
   const fields = FIELDS[slug] ?? [];
+  const defaultLabel = getModelOption(defaultModel)?.label ?? defaultModel;
 
   function onSubmit(formData: FormData) {
     const input = Object.fromEntries(Array.from(formData.entries()).filter(([, v]) => v !== ""));
     start(async () => {
-      const res = await triggerAgentRun(slug, input);
+      const res = await triggerAgentRun(
+        slug,
+        input,
+        modelChoice !== DEFAULT_VALUE ? { modelOverride: modelChoice } : undefined,
+      );
       if (res.ok) {
         toast.success("Agent lancé — résultat en cours…");
         setOpen(false);
+        setModelChoice(DEFAULT_VALUE);
       } else {
         toast.error(res.error);
       }
@@ -116,6 +134,32 @@ export function LaunchDialog({ slug, disabled }: { slug: string; disabled?: bool
               )}
             </div>
           ))}
+
+          <div className="space-y-1.5 border-t pt-4">
+            <Label htmlFor="modelChoice">Modèle LLM pour ce run</Label>
+            <Select value={modelChoice} onValueChange={setModelChoice}>
+              <SelectTrigger id="modelChoice">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={DEFAULT_VALUE}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">Par défaut</span>
+                    <span className="text-xs text-muted-foreground">{defaultLabel}</span>
+                  </div>
+                </SelectItem>
+                {SUPPORTED_MODELS.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{m.label}</span>
+                      <span className="text-xs text-muted-foreground">{m.tagline}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Exécution…" : "Exécuter l'agent"}
           </Button>
