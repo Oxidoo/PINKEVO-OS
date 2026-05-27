@@ -1,15 +1,17 @@
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { availableProviders } from "@/lib/ai/provider";
 import { getAgentsWithStats } from "@/lib/ai/runs";
 import { requireUser } from "@/lib/auth/server";
 import { LaunchDialog } from "./launch-dialog";
+import { MigrateToGeminiButton } from "./migrate-to-gemini-button";
 
 export const metadata = { title: "Agents IA" };
 
@@ -17,7 +19,9 @@ export default async function AgentsPage() {
   await requireUser();
   const agents = await getAgentsWithStats();
   const providers = availableProviders();
-  const noLlm = !providers.anthropic && !providers.openai;
+  const noLlm = !providers.anthropic && !providers.openai && !providers.google;
+  const someNotOnGemini = agents.some((a) => !a.model.startsWith("gemini"));
+  const showGeminiNudge = providers.google && someNotOnGemini;
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,12 +40,29 @@ export default async function AgentsPage() {
           <div className="space-y-1">
             <p className="font-medium">Aucun fournisseur LLM configuré</p>
             <p className="text-muted-foreground">
-              Définis <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code> ou{" "}
-              <code className="rounded bg-muted px-1">OPENAI_API_KEY</code> dans les variables
-              d&apos;environnement Vercel pour activer les agents. Sans clé, tout lancement
-              échouera avec un message clair (plus de contenu mock silencieux).
+              Pour activer les agents gratuitement, ajoute{" "}
+              <code className="rounded bg-muted px-1">GOOGLE_GENERATIVE_AI_API_KEY</code> (clé
+              Gemini, gratuite) dans Vercel — voir{" "}
+              <code className="rounded bg-muted px-1">docs/GEMINI_SETUP.md</code>. Sinon{" "}
+              <code className="rounded bg-muted px-1">ANTHROPIC_API_KEY</code> ou{" "}
+              <code className="rounded bg-muted px-1">OPENAI_API_KEY</code> (payants).
             </p>
           </div>
+        </div>
+      )}
+      {showGeminiNudge && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/30 bg-success/5 p-4 text-sm">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-success" />
+            <div className="space-y-1">
+              <p className="font-medium">Gemini est prêt — gratuit jusqu&apos;à 1 500 req/jour</p>
+              <p className="text-muted-foreground">
+                Certains agents pointent encore sur des modèles payants (Claude / GPT). Bascule-les
+                tous sur Gemini Flash en un clic.
+              </p>
+            </div>
+          </div>
+          <MigrateToGeminiButton targetModel={DEFAULT_MODEL_ID} />
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -86,7 +107,7 @@ export default async function AgentsPage() {
                 <LaunchDialog
                   slug={a.slug}
                   disabled={!a.enabled || noLlm}
-                  defaultModel={a.model}
+                  defaultModel={a.model || DEFAULT_MODEL_ID}
                 />
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/agents/${a.slug}`}>Détails</Link>

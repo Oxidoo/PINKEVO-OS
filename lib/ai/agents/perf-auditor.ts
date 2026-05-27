@@ -17,7 +17,7 @@ const perfSchema = z.object({
 
 export const perfAuditor: AgentHandler<typeof inputSchema> = {
   slug: "perf_auditor",
-  defaultModel: "claude-haiku-4-5",
+  defaultModel: "gemini-2.0-flash",
   inputSchema,
   run: async (input, model) => {
     const [site] = await db

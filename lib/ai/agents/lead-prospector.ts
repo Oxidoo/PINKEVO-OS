@@ -24,7 +24,7 @@ const extractionSchema = z.object({
 
 export const leadProspector: AgentHandler<typeof inputSchema> = {
   slug: "lead_prospector",
-  defaultModel: "claude-opus-4-5",
+  defaultModel: "gemini-2.0-flash",
   inputSchema,
   run: async (input, model, ctx) => {
     const places = await searchPlaces(input.keyword, input.city, input.count);

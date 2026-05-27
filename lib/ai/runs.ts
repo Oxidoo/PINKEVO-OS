@@ -61,7 +61,11 @@ export async function executeAgentRun(runId: string): Promise<void> {
       })
       .where(eq(agentRuns.id, runId));
 
-    if (result.tokensInput + result.tokensOutput > 0) {
+    // On n'enregistre l'usage agrégé que pour les modèles payants. Les
+    // modèles Gemini en free tier ne facturent rien, et leur provider
+    // "google" n'existe pas (encore) dans l'enum `api_provider`. Les stats
+    // par agent restent visibles via `agent_runs` (tokens + duration).
+    if (result.tokensInput + result.tokensOutput > 0 && cost > 0) {
       const today = finishedAt.toISOString().slice(0, 10);
       await db.insert(apiUsage).values({
         provider: providerForModel(effectiveModel),
@@ -151,6 +155,17 @@ export async function updateAgentConfig(
     .where(eq(agents.id, id));
   revalidatePath("/agents");
   return { ok: true };
+}
+
+/** Bascule tous les agents sur un modèle donné en une seule action. */
+export async function setAllAgentsModel(modelId: string): Promise<ActionResult> {
+  await requireRole(["owner", "admin"]);
+  if (!isSupportedModel(modelId)) {
+    return { ok: false, error: `Modèle ${modelId} non supporté` };
+  }
+  const rows = await db.update(agents).set({ model: modelId }).returning({ id: agents.id });
+  revalidatePath("/agents");
+  return { ok: true, id: String(rows.length) };
 }
 
 const monthStart = () => {

@@ -34,7 +34,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
   if (!agent) notFound();
   const runs = await getAgentRuns(agent.id);
   const providers = availableProviders();
-  const noLlm = !providers.anthropic && !providers.openai;
+  const noLlm = !providers.anthropic && !providers.openai && !providers.google;
   const modelLabel = getModelOption(agent.model)?.label ?? agent.model;
 
   return (

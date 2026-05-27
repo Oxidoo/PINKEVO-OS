@@ -22,7 +22,7 @@ const auditSchema = z.object({
 
 export const seoAuditor: AgentHandler<typeof inputSchema> = {
   slug: "seo_auditor",
-  defaultModel: "claude-opus-4-5",
+  defaultModel: "gemini-2.0-flash",
   inputSchema,
   run: async (input, model) => {
     const [site] = await db
