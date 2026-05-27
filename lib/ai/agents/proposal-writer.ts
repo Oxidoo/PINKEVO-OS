@@ -34,7 +34,7 @@ const SERVICE_LABEL: Record<string, string> = {
 
 export const proposalWriter: AgentHandler<typeof inputSchema> = {
   slug: "proposal_writer",
-  defaultModel: "claude-opus-4-5",
+  defaultModel: "gemini-2.0-flash",
   inputSchema,
   run: async (input, model) => {
     let targetEmail: string | null = null;

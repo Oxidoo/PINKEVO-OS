@@ -16,7 +16,7 @@ const scoreSchema = z.object({
 
 export const leadQualifier: AgentHandler<typeof inputSchema> = {
   slug: "lead_qualifier",
-  defaultModel: "claude-haiku-4-5",
+  defaultModel: "gemini-2.0-flash",
   inputSchema,
   run: async (input, model) => {
     const [lead] = await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1);
