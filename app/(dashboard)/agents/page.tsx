@@ -10,18 +10,41 @@ import { DEFAULT_MODEL_ID } from "@/lib/ai/models";
 import { availableProviders } from "@/lib/ai/provider";
 import { getAgentsWithStats } from "@/lib/ai/runs";
 import { requireUser } from "@/lib/auth/server";
+import { getClients } from "@/lib/crm/clients";
+import { getLeads } from "@/lib/crm/leads";
+import { getWebsitesWithScores } from "@/lib/websites/queries";
 import { LaunchDialog } from "./launch-dialog";
 import { MigrateToGeminiButton } from "./migrate-to-gemini-button";
 
 export const metadata = { title: "Agents IA" };
 
+function leadLabel(l: {
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  email: string | null;
+}) {
+  const n = `${l.firstName ?? ""} ${l.lastName ?? ""}`.trim();
+  return n || l.company || l.email || "Lead sans nom";
+}
+
 export default async function AgentsPage() {
   await requireUser();
-  const agents = await getAgentsWithStats();
+  const [agents, clients, leads, websites] = await Promise.all([
+    getAgentsWithStats(),
+    getClients(),
+    getLeads(),
+    getWebsitesWithScores(),
+  ]);
   const providers = availableProviders();
   const noLlm = !providers.anthropic && !providers.openai && !providers.google;
   const someNotOnGemini = agents.some((a) => !a.model.startsWith("gemini"));
   const showGeminiNudge = providers.google && someNotOnGemini;
+  const context = {
+    clients: clients.map((c) => ({ id: c.id, name: c.name })),
+    leads: leads.map((l) => ({ id: l.id, name: leadLabel(l) })),
+    websites: websites.map((w) => ({ id: w.id, name: w.name })),
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,6 +131,7 @@ export default async function AgentsPage() {
                   slug={a.slug}
                   disabled={!a.enabled || noLlm}
                   defaultModel={a.model || DEFAULT_MODEL_ID}
+                  context={context}
                 />
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/agents/${a.slug}`}>Détails</Link>
