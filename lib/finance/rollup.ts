@@ -18,8 +18,8 @@ export async function runFinanceRollup(): Promise<{ mrr: number; delta: number }
   const mrr = Number(mrrRow?.mrr ?? 0);
 
   const now = new Date();
-  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const prevEnd = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
   const [prevRow] = await db
     .select({ total: sql<string>`coalesce(sum(${invoices.total}), 0)` })
