@@ -11,10 +11,23 @@ import { getModelOption } from "@/lib/ai/models";
 import { availableProviders } from "@/lib/ai/provider";
 import { getAgentRuns } from "@/lib/ai/runs";
 import { requireUser } from "@/lib/auth/server";
+import { getClients } from "@/lib/crm/clients";
+import { getLeads } from "@/lib/crm/leads";
 import { db } from "@/lib/db/client";
 import { agents } from "@/lib/db/schema";
+import { getWebsitesWithScores } from "@/lib/websites/queries";
 import { LaunchDialog } from "../launch-dialog";
 import { ConfigForm } from "./config-form";
+
+function leadLabel(l: {
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  email: string | null;
+}) {
+  const n = `${l.firstName ?? ""} ${l.lastName ?? ""}`.trim();
+  return n || l.company || l.email || "Lead sans nom";
+}
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   success: "default",
@@ -32,10 +45,20 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
     .where(eq(agents.slug, slug as (typeof agents.slug.enumValues)[number]))
     .limit(1);
   if (!agent) notFound();
-  const runs = await getAgentRuns(agent.id);
+  const [runs, clients, leads, websites] = await Promise.all([
+    getAgentRuns(agent.id),
+    getClients(),
+    getLeads(),
+    getWebsitesWithScores(),
+  ]);
   const providers = availableProviders();
   const noLlm = !providers.anthropic && !providers.openai && !providers.google;
   const modelLabel = getModelOption(agent.model)?.label ?? agent.model;
+  const context = {
+    clients: clients.map((c) => ({ id: c.id, name: c.name })),
+    leads: leads.map((l) => ({ id: l.id, name: leadLabel(l) })),
+    websites: websites.map((w) => ({ id: w.id, name: w.name })),
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,6 +81,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
               slug={agent.slug}
               disabled={!agent.enabled || noLlm}
               defaultModel={agent.model}
+              context={context}
             />
           </div>
         </div>
