@@ -14,24 +14,38 @@ export interface ModelOption {
  */
 export const SUPPORTED_MODELS: readonly ModelOption[] = [
   {
-    id: "gemini-2.0-flash",
-    label: "Gemini 2.0 Flash",
+    id: "gemini-2.5-flash-lite",
+    label: "Gemini 2.5 Flash Lite",
     provider: "google",
-    tagline: "Google · 1 500 req/jour gratuites · Rapide & polyvalent",
+    tagline: "Google · ~1000 req/jour gratuites · Le plus généreux",
     free: true,
   },
   {
-    id: "gemini-1.5-pro",
-    label: "Gemini 1.5 Pro",
+    id: "gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
     provider: "google",
-    tagline: "Google · 50 req/jour gratuites · Top qualité",
+    tagline: "Google · ~250 req/jour gratuites · Bonne qualité",
+    free: true,
+  },
+  {
+    id: "gemini-2.0-flash",
+    label: "Gemini 2.0 Flash",
+    provider: "google",
+    tagline: "Google · ~200 req/jour gratuites · Polyvalent",
+    free: true,
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    label: "Gemini 2.0 Flash Lite",
+    provider: "google",
+    tagline: "Google · ~200 req/jour gratuites · Économique",
     free: true,
   },
   {
     id: "gemini-1.5-flash",
     label: "Gemini 1.5 Flash",
     provider: "google",
-    tagline: "Google · 1 500 req/jour gratuites · Légèrement plus ancien",
+    tagline: "Google · Modèle legacy · Backup si les 2.x sont indispo",
     free: true,
   },
   {
@@ -67,7 +81,7 @@ export const SUPPORTED_MODELS: readonly ModelOption[] = [
 ] as const;
 
 /** Modèle par défaut suggéré (utilisé pour les nouveaux agents). */
-export const DEFAULT_MODEL_ID = "gemini-2.0-flash";
+export const DEFAULT_MODEL_ID = "gemini-2.5-flash-lite";
 
 export function isSupportedModel(id: string): boolean {
   return SUPPORTED_MODELS.some((m) => m.id === id);

@@ -8,12 +8,15 @@ volume reste raisonnable.
 
 | Modèle | Limite gratuite |
 |---|---|
-| Gemini 2.0 Flash | **1 500 requêtes / jour**, 1M tokens / minute |
-| Gemini 1.5 Flash | 1 500 requêtes / jour |
-| Gemini 1.5 Pro | 50 requêtes / jour (qualité supérieure) |
+| **Gemini 2.5 Flash Lite** (par défaut) | **~1 000 req/jour** — le plus généreux |
+| Gemini 2.5 Flash | ~250 req/jour |
+| Gemini 2.0 Flash | ~200 req/jour |
+| Gemini 2.0 Flash Lite | ~200 req/jour |
+| Gemini 1.5 Flash (legacy) | Backup si les 2.x sont indispo |
 
 À l'échelle de Pinkevo-OS, ça permet ~30–50 lancements d'agents par jour
-sans aucun coût.
+sans aucun coût. Les modèles 2.5 sont privilégiés car leur free tier est
+le mieux maintenu actuellement.
 
 ## Étape 1 — Récupérer une clé API
 
@@ -86,3 +89,40 @@ Tu as plusieurs options :
    dans le code (`provider.ts` peut être étendu pour faire du round-robin)
 3. **Passer sur Anthropic / OpenAI** : ajoute leur clé en plus, et change
    le modèle de l'agent concerné dans la config
+
+## Troubleshooting
+
+### Erreur « Quota exceeded ... limit: 0 »
+
+Si tu vois ce message :
+
+```
+Quota exceeded for metric: generate_content_free_tier_requests,
+limit: 0, model: gemini-2.0-flash
+```
+
+`limit: 0` signifie que **ton projet Google n'a aucun quota free tier
+disponible** sur ce modèle précis. Causes typiques :
+
+- **Le projet a la facturation Google Cloud activée** : sur certains projets
+  facturés, le quota « free tier » est mis à 0 pour t'éviter de basculer
+  par erreur sur du payant. Les requêtes échouent au lieu d'être facturées
+- **Le modèle n'est pas dispo pour ta région** ou ton tier d'organisation
+- **Le quota journalier est épuisé** (à minuit Pacific Time il se reset)
+
+**Solutions, dans l'ordre :**
+
+1. **Essaie un autre modèle Gemini** : va sur la config de l'agent → switch
+   sur `Gemini 2.5 Flash Lite` (1000 req/jour, le mieux supporté en free)
+   ou `Gemini 2.5 Flash`. Les bannières "Tout basculer sur Gemini" sur
+   `/agents` utilisent le default (`gemini-2.5-flash-lite`) — si tu cliques
+   à nouveau dessus, tous les agents passent dessus en 1 clic
+2. **Crée une clé sur un nouveau projet AI Studio** sans facturation activée :
+   - Va sur https://aistudio.google.com/apikey
+   - **Create API key in new project** (et non « add to existing project »)
+   - Utilise la nouvelle clé dans Vercel
+3. **Vérifie le statut billing du projet** : https://console.cloud.google.com/billing
+   — si du « Billing is enabled » est affiché, désactive-le pour ce projet
+   spécifique, ou crée-en un autre sans billing
+4. **Attends la prochaine fenêtre de quota** : minuit Pacific Time
+   (~9 h UTC) — le compteur se reset
