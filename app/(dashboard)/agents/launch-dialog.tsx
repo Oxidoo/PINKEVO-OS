@@ -61,35 +61,6 @@ function fieldsFor(slug: string, ctx: LaunchContext): Field[] {
           options: (ctx.leads ?? []).map(leadLabel),
         },
       ];
-    case "proposal_writer":
-      return [
-        {
-          kind: "select",
-          name: "service",
-          label: "Service",
-          options: [
-            { value: "audit_seo", label: "Audit SEO" },
-            { value: "refonte_site", label: "Refonte site" },
-            { value: "seo_recurrent", label: "SEO récurrent" },
-            { value: "pack_agence", label: "Pack agence" },
-          ],
-        },
-        {
-          kind: "select",
-          name: "clientId",
-          label: "Client (optionnel)",
-          options: (ctx.clients ?? []).map(leadLabel),
-          optional: true,
-        },
-        {
-          kind: "select",
-          name: "leadId",
-          label: "Lead (optionnel)",
-          options: (ctx.leads ?? []).map(leadLabel),
-          optional: true,
-        },
-        { kind: "textarea", name: "objectives", label: "Objectifs" },
-      ];
     case "seo_auditor":
     case "perf_auditor":
       return [

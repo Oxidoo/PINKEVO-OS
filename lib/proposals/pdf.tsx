@@ -1,4 +1,4 @@
-import { Document, Page, renderToBuffer, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Link, Page, renderToBuffer, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 export interface ProposalContent {
   title?: string;
@@ -6,8 +6,15 @@ export interface ProposalContent {
   objectives?: string[];
   deliverables?: string[];
   timeline?: string;
+  conditions?: string;
   totalSetup?: number;
   totalRecurring?: number;
+  paymentLink?: { url: string; label: string } | null;
+  signature?: {
+    name: string;
+    signedAt: Date | string;
+    ip?: string | null;
+  } | null;
 }
 
 const s = StyleSheet.create({
@@ -25,8 +32,37 @@ const s = StyleSheet.create({
   },
   priceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   total: { fontSize: 14, fontWeight: 700 },
+  payBox: {
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 6,
+    borderStyle: "solid",
+    borderColor: "#EC4899",
+    borderWidth: 1,
+  },
+  payLink: { color: "#EC4899", marginTop: 4, textDecoration: "underline" },
+  signedBox: {
+    marginTop: 18,
+    padding: 14,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 6,
+    borderColor: "#bbf7d0",
+    borderStyle: "solid",
+    borderWidth: 1,
+  },
   footer: { position: "absolute", bottom: 32, left: 48, right: 48, fontSize: 9, color: "#94a3b8" },
 });
+
+function formatDateFr(d: Date | string): string {
+  const date = typeof d === "string" ? new Date(d) : d;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
 
 function ProposalDoc({ content }: { content: ProposalContent }) {
   const euro = (n?: number) =>
@@ -88,8 +124,43 @@ function ProposalDoc({ content }: { content: ProposalContent }) {
           </View>
         </View>
 
+        {content.paymentLink && (
+          <View style={s.payBox}>
+            <Text style={{ fontSize: 12, fontWeight: 700 }}>Paiement sécurisé</Text>
+            <Text style={s.p}>
+              Réglez en ligne en quelques secondes : {content.paymentLink.label}
+            </Text>
+            <Link src={content.paymentLink.url} style={s.payLink}>
+              {content.paymentLink.url}
+            </Link>
+          </View>
+        )}
+
+        {content.conditions && (
+          <View>
+            <Text style={s.h2}>Conditions</Text>
+            <Text style={s.p}>{content.conditions}</Text>
+          </View>
+        )}
+
+        {content.signature ? (
+          <View style={s.signedBox}>
+            <Text style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}>
+              Devis signé électroniquement
+            </Text>
+            <Text style={s.p}>Par : {content.signature.name}</Text>
+            <Text style={s.p}>Le : {formatDateFr(content.signature.signedAt)}</Text>
+            {content.signature.ip && (
+              <Text style={[s.p, { color: "#64748b", fontSize: 9 }]}>
+                Adresse IP : {content.signature.ip}
+              </Text>
+            )}
+          </View>
+        ) : null}
+
         <Text style={s.footer}>
-          PINKEVO — Proposition générée automatiquement. Valable 30 jours.
+          PINKEVO — Devis généré par PINKEVO OS. Valeur juridique d&apos;une signature
+          électronique simple (eIDAS).
         </Text>
       </Page>
     </Document>

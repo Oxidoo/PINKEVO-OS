@@ -56,11 +56,40 @@ export const invoices = pgTable("invoices", {
   ...timestamps,
 });
 
+export const proposalTemplates = pgTable("proposal_templates", {
+  id: idCol(),
+  slug: varchar("slug", { length: 96 }).notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  // Structure du devis : titre, contexte, objectifs[], livrables[], planning,
+  // conditions. Les valeurs sont des chaînes contenant des variables `{{client}}`,
+  // `{{date}}`, `{{prix_setup}}`, etc., substituées à la création du devis.
+  sections: jsonb("sections")
+    .$type<{
+      title: string;
+      context: string;
+      objectives: string[];
+      deliverables: string[];
+      timeline: string;
+      conditions: string;
+    }>()
+    .notNull(),
+  defaultSetup: numeric("default_setup", { precision: 12, scale: 2 }).notNull().default("0"),
+  defaultRecurring: numeric("default_recurring", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  variables: text("variables").array().notNull().default([]),
+  ...timestamps,
+});
+
 export const proposals = pgTable("proposals", {
   id: idCol(),
   clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
   leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
   dealId: uuid("deal_id").references(() => deals.id, { onDelete: "set null" }),
+  templateId: uuid("template_id").references(() => proposalTemplates.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   content: jsonb("content").$type<Record<string, unknown>>().notNull().default({}),
   totalSetup: numeric("total_setup", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -71,7 +100,10 @@ export const proposals = pgTable("proposals", {
   pdfUrl: text("pdf_url"),
   signatureUrl: text("signature_url"),
   signatureToken: text("signature_token").unique(),
+  signatureName: text("signature_name"),
   signedIp: varchar("signed_ip", { length: 64 }),
+  paymentLinkUrl: text("payment_link_url"),
+  paymentLinkLabel: text("payment_link_label"),
   ...timestamps,
 });
 
@@ -117,6 +149,7 @@ export const apiUsage = pgTable("api_usage", {
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type Proposal = typeof proposals.$inferSelect;
+export type ProposalTemplate = typeof proposalTemplates.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type ToolSubscription = typeof toolSubscriptions.$inferSelect;
 export type ApiUsage = typeof apiUsage.$inferSelect;

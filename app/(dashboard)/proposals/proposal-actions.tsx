@@ -1,13 +1,20 @@
 "use client";
 
-import { FileText, Link2 } from "lucide-react";
+import { FileText, Link2, Send, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { ensureProposalToken } from "@/lib/proposals/actions";
+import {
+  deleteProposal,
+  ensureProposalToken,
+  markProposalSent,
+} from "@/lib/proposals/actions";
 
-export function ProposalRowActions({ id }: { id: string }) {
+export function ProposalRowActions({ id, status }: { id: string; status: string }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
+  const canMarkSent = status === "draft";
 
   function copyLink() {
     start(async () => {
@@ -19,6 +26,31 @@ export function ProposalRowActions({ id }: { id: string }) {
       const url = `${window.location.origin}/p/${token}`;
       await navigator.clipboard.writeText(url).catch(() => {});
       toast.success("Lien de signature copié");
+    });
+  }
+
+  function onSend() {
+    start(async () => {
+      const r = await markProposalSent(id);
+      if (r.ok) {
+        toast.success("Marqué comme envoyé");
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
+  function onDelete() {
+    if (!confirm("Supprimer définitivement ce devis ?")) return;
+    start(async () => {
+      const r = await deleteProposal(id);
+      if (r.ok) {
+        toast.success("Devis supprimé");
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
     });
   }
 
@@ -35,8 +67,32 @@ export function ProposalRowActions({ id }: { id: string }) {
         onClick={copyLink}
         disabled={pending}
         aria-label="Copier le lien de signature"
+        title="Copier le lien de signature"
       >
         <Link2 className="size-4" />
+      </Button>
+      {canMarkSent && (
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={onSend}
+          disabled={pending}
+          aria-label="Marquer comme envoyé"
+          title="Marquer comme envoyé"
+        >
+          <Send className="size-4" />
+        </Button>
+      )}
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={onDelete}
+        disabled={pending}
+        aria-label="Supprimer"
+        title="Supprimer"
+        className="text-destructive hover:text-destructive"
+      >
+        <Trash2 className="size-4" />
       </Button>
     </div>
   );

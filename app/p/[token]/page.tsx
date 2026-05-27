@@ -1,10 +1,12 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { getProposalByToken } from "@/lib/proposals/public";
-import { AcceptButton } from "./accept-button";
+import { SignatureForm } from "./signature-form";
 
 export const metadata = { title: "Proposition" };
 
@@ -14,6 +16,7 @@ interface Content {
   objectives?: string[];
   deliverables?: string[];
   timeline?: string;
+  conditions?: string;
 }
 
 export default async function PublicProposalPage({
@@ -31,7 +34,7 @@ export default async function PublicProposalPage({
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-6 py-12">
       <div className="flex items-center justify-between">
         <span className="text-lg font-bold text-brand-600">PINKEVO</span>
-        {accepted && <Badge>Acceptée</Badge>}
+        {accepted && <Badge>Signée</Badge>}
       </div>
 
       <div>
@@ -43,7 +46,7 @@ export default async function PublicProposalPage({
       {c.context && (
         <section>
           <h2 className="mb-1 text-sm font-semibold text-muted-foreground">Contexte</h2>
-          <p className="text-sm leading-relaxed">{c.context}</p>
+          <p className="whitespace-pre-line text-sm leading-relaxed">{c.context}</p>
         </section>
       )}
 
@@ -72,7 +75,7 @@ export default async function PublicProposalPage({
       {c.timeline && (
         <section>
           <h2 className="mb-1 text-sm font-semibold text-muted-foreground">Planning</h2>
-          <p className="text-sm">{c.timeline}</p>
+          <p className="whitespace-pre-line text-sm">{c.timeline}</p>
         </section>
       )}
 
@@ -87,23 +90,46 @@ export default async function PublicProposalPage({
         </div>
       </div>
 
-      <div className="flex flex-col items-start gap-3">
-        {accepted ? (
-          <p className="text-sm text-success">
-            Signée le{" "}
-            {proposal.acceptedAt
-              ? format(proposal.acceptedAt, "d MMMM yyyy 'à' HH:mm", { locale: fr })
-              : ""}
-            .
+      {proposal.paymentLinkUrl && (
+        <div className="rounded-xl border border-brand-200 bg-white p-5">
+          <p className="text-sm font-medium">Paiement sécurisé</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {proposal.paymentLinkLabel ?? "Réglez en ligne en quelques secondes."}
           </p>
+          <Button asChild className="mt-3">
+            <a href={proposal.paymentLinkUrl} target="_blank" rel="noreferrer">
+              Payer maintenant
+              <ExternalLink className="ml-2 size-3.5" />
+            </a>
+          </Button>
+        </div>
+      )}
+
+      {c.conditions && (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold text-muted-foreground">Conditions</h2>
+          <p className="whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+            {c.conditions}
+          </p>
+        </section>
+      )}
+
+      <div className="rounded-xl border p-5">
+        {accepted ? (
+          <div className="space-y-1 text-sm">
+            <p className="font-medium text-success">Devis signé électroniquement</p>
+            {proposal.signatureName && (
+              <p className="text-muted-foreground">Par : {proposal.signatureName}</p>
+            )}
+            {proposal.acceptedAt && (
+              <p className="text-muted-foreground">
+                Le{" "}
+                {format(proposal.acceptedAt, "d MMMM yyyy 'à' HH:mm", { locale: fr })}
+              </p>
+            )}
+          </div>
         ) : (
-          <>
-            <AcceptButton token={token} />
-            <p className="text-xs text-muted-foreground">
-              En cliquant, vous acceptez la proposition. Votre IP et l&apos;horodatage sont
-              enregistrés à valeur de signature électronique.
-            </p>
-          </>
+          <SignatureForm token={token} />
         )}
       </div>
     </main>

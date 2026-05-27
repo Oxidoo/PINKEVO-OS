@@ -24,6 +24,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     title: content.title ?? p.title,
     totalSetup: content.totalSetup ?? Number(p.totalSetup),
     totalRecurring: content.totalRecurring ?? Number(p.totalRecurring),
+    paymentLink: p.paymentLinkUrl
+      ? { url: p.paymentLinkUrl, label: p.paymentLinkLabel ?? "Paiement" }
+      : null,
+    signature:
+      p.acceptedAt && p.signatureName
+        ? { name: p.signatureName, signedAt: p.acceptedAt, ip: p.signedIp }
+        : null,
   });
 
   const path = `proposals/${p.id}.pdf`;
