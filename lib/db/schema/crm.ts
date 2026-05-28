@@ -111,6 +111,7 @@ export const leadContacts = pgTable("lead_contacts", {
   method: varchar("method", { length: 10 }).notNull(), // "sms" | "email" | "call"
   note: text("note"),
   contactedAt: timestamp("contacted_at", { withTimezone: true }).notNull().defaultNow(),
+  followupAt: timestamp("followup_at", { withTimezone: true }),
   createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
   ...timestamps,
 });

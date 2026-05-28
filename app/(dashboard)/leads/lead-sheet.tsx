@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 import {
   Building2,
   Calendar,
+  CalendarClock,
   Check,
   Globe,
   Mail,
@@ -16,16 +17,25 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { getLeadContacts, updateLeadContactNote } from "@/lib/crm/leads";
 import type { Lead, LeadContact } from "@/lib/db/schema";
 import { LeadContactDialog } from "./lead-contact-dialog";
+
+function toDateTimeLocal(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (Number.isNaN(date.getTime())) return "";
+  const tz = date.getTime() - date.getTimezoneOffset() * 60_000;
+  return new Date(tz).toISOString().slice(0, 16);
+}
 
 function leadName(lead: Lead) {
   const n = `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim();
@@ -46,21 +56,31 @@ const METHOD_LABEL: Record<string, string> = {
 
 function ContactEntry({
   entry,
-  onNoteUpdated,
+  onUpdated,
 }: {
   entry: LeadContact;
-  onNoteUpdated: (note: string | null) => void;
+  onUpdated: (patch: { note: string | null; followupAt: Date | null }) => void;
 }) {
   const Icon = METHOD_ICON[entry.method] ?? Phone;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.note ?? "");
+  const [followup, setFollowup] = useState(toDateTimeLocal(entry.followupAt));
   const [pending, start] = useTransition();
+
+  function handleEdit() {
+    setDraft(entry.note ?? "");
+    setFollowup(toDateTimeLocal(entry.followupAt));
+    setEditing(true);
+  }
 
   function handleSave() {
     start(async () => {
-      const r = await updateLeadContactNote(entry.id, draft);
+      const r = await updateLeadContactNote(entry.id, draft, followup || null);
       if (r.ok) {
-        onNoteUpdated(draft.trim() || null);
+        onUpdated({
+          note: draft.trim() || null,
+          followupAt: followup ? new Date(followup) : null,
+        });
         setEditing(false);
         toast.success("Note mise à jour");
       } else {
@@ -71,8 +91,12 @@ function ContactEntry({
 
   function handleCancel() {
     setDraft(entry.note ?? "");
+    setFollowup(toDateTimeLocal(entry.followupAt));
     setEditing(false);
   }
+
+  const followupDate = entry.followupAt ? new Date(entry.followupAt) : null;
+  const followupFuture = followupDate && followupDate.getTime() > Date.now();
 
   return (
     <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-sm">
@@ -88,9 +112,9 @@ function ContactEntry({
           {!editing && (
             <button
               type="button"
-              onClick={() => { setDraft(entry.note ?? ""); setEditing(true); }}
+              onClick={handleEdit}
               className="ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground"
-              title="Modifier la note"
+              title="Modifier"
             >
               <Pencil className="size-3" />
             </button>
@@ -108,6 +132,18 @@ function ContactEntry({
             autoFocus
             className="text-sm"
           />
+          <div className="space-y-1">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <CalendarClock className="size-3" />
+              Rappel (optionnel)
+            </label>
+            <Input
+              type="datetime-local"
+              value={followup}
+              onChange={(e) => setFollowup(e.target.value)}
+              className="text-sm"
+            />
+          </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={handleSave} disabled={pending}>
               <Check className="mr-1 size-3" />
@@ -120,7 +156,19 @@ function ContactEntry({
           </div>
         </div>
       ) : (
-        entry.note && <p className="mt-1 text-muted-foreground">{entry.note}</p>
+        <>
+          {entry.note && <p className="mt-1 text-muted-foreground">{entry.note}</p>}
+          {followupDate && (
+            <p
+              className={`mt-1.5 flex items-center gap-1.5 text-xs font-medium ${
+                followupFuture ? "text-amber-600" : "text-muted-foreground line-through"
+              }`}
+            >
+              <CalendarClock className="size-3" />
+              Rappel le {format(followupDate, "d MMM yyyy 'à' HH:mm", { locale: fr })}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
@@ -148,6 +196,18 @@ export function LeadSheet({
     }
   }, [lead]);
 
+  const nextFollowup = useMemo(() => {
+    const now = Date.now();
+    let best: LeadContact | null = null;
+    for (const h of history) {
+      if (!h.followupAt) continue;
+      const t = new Date(h.followupAt).getTime();
+      if (t < now) continue;
+      if (!best || t < new Date(best.followupAt!).getTime()) best = h;
+    }
+    return best;
+  }, [history]);
+
   function handleDone() {
     if (lead) {
       getLeadContacts(lead.id).then(setHistory).catch(() => {});
@@ -164,8 +224,8 @@ export function LeadSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader className="space-y-2">
+        <SheetContent className="w-full overflow-y-auto px-6 py-6 sm:max-w-xl sm:px-8">
+          <SheetHeader className="space-y-2 p-0">
             <SheetTitle className="text-lg">{name}</SheetTitle>
             <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="capitalize">
@@ -178,6 +238,13 @@ export function LeadSheet({
                 <Badge variant="outline" className="gap-1">
                   <Star className="size-3" />
                   {lead.score}/100
+                </Badge>
+              )}
+              {nextFollowup?.followupAt && (
+                <Badge className="gap-1 bg-amber-500 text-white hover:bg-amber-600">
+                  <CalendarClock className="size-3" />
+                  Rappel{" "}
+                  {format(new Date(nextFollowup.followupAt), "d MMM 'à' HH:mm", { locale: fr })}
                 </Badge>
               )}
             </div>
@@ -284,9 +351,13 @@ export function LeadSheet({
                       <ContactEntry
                         key={entry.id}
                         entry={entry}
-                        onNoteUpdated={(note) =>
+                        onUpdated={(patch) =>
                           setHistory((prev) =>
-                            prev.map((e) => (e.id === entry.id ? { ...e, note } : e)),
+                            prev.map((e) =>
+                              e.id === entry.id
+                                ? { ...e, note: patch.note, followupAt: patch.followupAt }
+                                : e,
+                            ),
                           )
                         }
                       />

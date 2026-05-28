@@ -202,15 +202,22 @@ const contactMethodSchema = z.object({
   id: z.string().uuid(),
   method: z.enum(["sms", "email", "call"]),
   note: z.string().max(1000).optional(),
+  followupAt: z.coerce.date().optional(),
 });
 
 export async function contactLead(
   id: string,
   method: string,
   note: string,
+  followupAt?: string | null,
 ): Promise<ActionResult> {
   const profile = await requireRole(["owner", "admin", "manager", "sales"]);
-  const parsed = contactMethodSchema.safeParse({ id, method, note: note || undefined });
+  const parsed = contactMethodSchema.safeParse({
+    id,
+    method,
+    note: note || undefined,
+    followupAt: followupAt || undefined,
+  });
   if (!parsed.success) return { ok: false, error: "Données invalides" };
 
   const now = new Date();
@@ -219,6 +226,7 @@ export async function contactLead(
     method: parsed.data.method,
     note: parsed.data.note ?? null,
     contactedAt: now,
+    followupAt: parsed.data.followupAt ?? null,
     createdBy: profile.id,
   });
 
@@ -243,14 +251,53 @@ export async function getLeadContacts(id: string): Promise<LeadContact[]> {
 export async function updateLeadContactNote(
   contactId: string,
   note: string,
+  followupAt?: string | null,
 ): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager", "sales"]);
   if (note.length > 1000) return { ok: false, error: "Note trop longue" };
+  const followup = followupAt ? new Date(followupAt) : null;
+  if (followup && Number.isNaN(followup.getTime())) {
+    return { ok: false, error: "Date invalide" };
+  }
   await db
     .update(leadContacts)
-    .set({ note: note.trim() || null })
+    .set({ note: note.trim() || null, followupAt: followup })
     .where(eq(leadContacts.id, contactId));
+  revalidatePath("/leads");
   return { ok: true };
+}
+
+export async function getUpcomingFollowups(): Promise<
+  { leadId: string; followupAt: Date; note: string | null; contactId: string }[]
+> {
+  await requireUser();
+  const rows = await db
+    .select({
+      id: leadContacts.id,
+      leadId: leadContacts.leadId,
+      followupAt: leadContacts.followupAt,
+      note: leadContacts.note,
+    })
+    .from(leadContacts)
+    .where(isNotNull(leadContacts.followupAt))
+    .orderBy(leadContacts.followupAt);
+  // Garder le rappel futur le plus proche par lead
+  const byLead = new Map<string, { leadId: string; followupAt: Date; note: string | null; contactId: string }>();
+  const now = Date.now();
+  for (const r of rows) {
+    if (!r.followupAt) continue;
+    if (r.followupAt.getTime() < now) continue;
+    const existing = byLead.get(r.leadId);
+    if (!existing || r.followupAt.getTime() < existing.followupAt.getTime()) {
+      byLead.set(r.leadId, {
+        leadId: r.leadId,
+        followupAt: r.followupAt,
+        note: r.note,
+        contactId: r.id,
+      });
+    }
+  }
+  return [...byLead.values()].sort((a, b) => a.followupAt.getTime() - b.followupAt.getTime());
 }
 
 export async function convertLeadToClient(id: string): Promise<ActionResult> {
