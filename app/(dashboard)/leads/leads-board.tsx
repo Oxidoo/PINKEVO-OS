@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Building2, CheckSquare, Sparkles, Trash2, UserPlus } from "lucide-react";
+import { Building2, CheckSquare, PhoneCall, Sparkles, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -23,6 +23,7 @@ import {
   updateLeadStatus,
 } from "@/lib/crm/leads";
 import type { Lead } from "@/lib/db/schema";
+import { LeadContactDialog } from "./lead-contact-dialog";
 import { LeadSheet } from "./lead-sheet";
 import { DEFAULT_FILTERS, type LeadFilters, LeadsFilterBar } from "./leads-filters";
 
@@ -43,12 +44,14 @@ function leadName(lead: Lead) {
 function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
   let out = leads;
   if (filters.query) {
-    const q = filters.query.toLowerCase();
+    const q = filters.query.toLowerCase().replace(/\s/g, "");
+    const qDigits = q.replace(/\D/g, "");
     out = out.filter(
       (l) =>
         leadName(l).toLowerCase().includes(q) ||
         l.company?.toLowerCase().includes(q) ||
-        l.email?.toLowerCase().includes(q),
+        l.email?.toLowerCase().includes(q) ||
+        (qDigits.length > 0 && (l.phone ?? "").replace(/\D/g, "").includes(qDigits)),
     );
   }
   if (filters.category !== "all") out = out.filter((l) => l.category === filters.category);
@@ -70,6 +73,7 @@ function LeadCard({
   onOpen,
   onSelect,
   onDelete,
+  onContact,
 }: {
   lead: Lead;
   selected: boolean;
@@ -77,6 +81,7 @@ function LeadCard({
   onOpen: (lead: Lead) => void;
   onSelect: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
+  onContact: (lead: Lead) => void;
 }) {
   const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -169,6 +174,18 @@ function LeadCard({
                 variant="ghost"
                 className="h-7 px-2 text-xs"
                 disabled={pending}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onContact(lead);
+                }}
+              >
+                <PhoneCall className="mr-1 size-3" /> Contacter
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                disabled={pending}
                 onClick={() =>
                   start(async () => {
                     const r = await enrichLead(lead.id);
@@ -221,6 +238,7 @@ function Column({
   onOpen,
   onSelect,
   onDelete,
+  onContact,
 }: {
   id: string;
   label: string;
@@ -230,6 +248,7 @@ function Column({
   onOpen: (lead: Lead) => void;
   onSelect: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
+  onContact: (lead: Lead) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
@@ -253,6 +272,7 @@ function Column({
             onOpen={onOpen}
             onSelect={onSelect}
             onDelete={onDelete}
+            onContact={onContact}
           />
         ))}
       </div>
@@ -269,6 +289,7 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
   const [optimistic, setOptimistic] = useOptimistic(items);
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [contactTarget, setContactTarget] = useState<Lead | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [pending, start] = useTransition();
@@ -345,6 +366,17 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
     setSelected(new Set());
   }
 
+  function handleContacted() {
+    router.refresh();
+    // Optimistically move the lead to "contacted" in the board
+    if (contactTarget) {
+      const id = contactTarget.id;
+      setItems((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, status: "contacted" as Lead["status"] } : l)),
+      );
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
@@ -393,12 +425,45 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
               onOpen={setSelectedLead}
               onSelect={handleSelect}
               onDelete={handleDelete}
+              onContact={setContactTarget}
             />
           ))}
         </div>
       </DndContext>
 
-      <LeadSheet lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} />
+      <LeadSheet
+        lead={selectedLead}
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onContacted={() => {
+          router.refresh();
+          if (selectedLead) {
+            const updated = { ...selectedLead, status: "contacted" as Lead["status"] };
+            setSelectedLead(updated);
+            setItems((prev) =>
+              prev.map((l) => (l.id === selectedLead.id ? updated : l)),
+            );
+          }
+        }}
+      />
+
+      {contactTarget && (
+        <LeadContactDialog
+          leadId={contactTarget.id}
+          leadName={
+            `${contactTarget.firstName ?? ""} ${contactTarget.lastName ?? ""}`.trim() ||
+            contactTarget.company ||
+            contactTarget.email ||
+            "Lead"
+          }
+          open={!!contactTarget}
+          onClose={() => setContactTarget(null)}
+          onDone={() => {
+            handleContacted();
+            setContactTarget(null);
+          }}
+        />
+      )}
     </>
   );
 }

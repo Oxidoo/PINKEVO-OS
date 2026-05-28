@@ -110,7 +110,7 @@ export function LeadsFilterBar({
       <div className="relative col-span-2 min-w-0 sm:min-w-36 sm:flex-1">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input
-          placeholder="Rechercher un lead…"
+          placeholder="Nom, email, téléphone…"
           className="pl-8"
           value={filters.query}
           onChange={(e) => set("query", e.target.value)}

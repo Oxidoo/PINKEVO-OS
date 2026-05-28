@@ -10,6 +10,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import type { InferSelectModel } from "drizzle-orm";
 import { idCol, timestamps } from "./_shared";
 import { profiles } from "./auth";
 import {
@@ -102,6 +103,18 @@ export const activities = pgTable("activities", {
   ...timestamps,
 });
 
+export const leadContacts = pgTable("lead_contacts", {
+  id: idCol(),
+  leadId: uuid("lead_id")
+    .notNull()
+    .references(() => leads.id, { onDelete: "cascade" }),
+  method: varchar("method", { length: 10 }).notNull(), // "sms" | "email" | "call"
+  note: text("note"),
+  contactedAt: timestamp("contacted_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: uuid("created_by").references(() => profiles.id, { onDelete: "set null" }),
+  ...timestamps,
+});
+
 export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Contact = typeof contacts.$inferSelect;
@@ -110,3 +123,4 @@ export type NewLead = typeof leads.$inferInsert;
 export type Deal = typeof deals.$inferSelect;
 export type NewDeal = typeof deals.$inferInsert;
 export type Activity = typeof activities.$inferSelect;
+export type LeadContact = InferSelectModel<typeof leadContacts>;

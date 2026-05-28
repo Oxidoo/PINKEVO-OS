@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
-import { clients, leads } from "@/lib/db/schema";
+import { clients, leadContacts, leads } from "@/lib/db/schema";
+import type { LeadContact } from "@/lib/db/schema";
 import { searchCompany } from "@/lib/integrations/pappers/client";
 import type { ActionResult } from "./clients";
 import { leadInput, leadStatusValues } from "./validation";
@@ -195,6 +196,48 @@ export async function importLeadsFromCsv(
   }
   revalidatePath("/leads");
   return { ok: true, id: JSON.stringify({ imported: deduped.length, skipped }) };
+}
+
+const contactMethodSchema = z.object({
+  id: z.string().uuid(),
+  method: z.enum(["sms", "email", "call"]),
+  note: z.string().max(1000).optional(),
+});
+
+export async function contactLead(
+  id: string,
+  method: string,
+  note: string,
+): Promise<ActionResult> {
+  const profile = await requireRole(["owner", "admin", "manager", "sales"]);
+  const parsed = contactMethodSchema.safeParse({ id, method, note: note || undefined });
+  if (!parsed.success) return { ok: false, error: "Données invalides" };
+
+  const now = new Date();
+  await db.insert(leadContacts).values({
+    leadId: parsed.data.id,
+    method: parsed.data.method,
+    note: parsed.data.note ?? null,
+    contactedAt: now,
+    createdBy: profile.id,
+  });
+
+  await db
+    .update(leads)
+    .set({ status: "contacted", lastContactedAt: now })
+    .where(eq(leads.id, parsed.data.id));
+
+  revalidatePath("/leads");
+  return { ok: true };
+}
+
+export async function getLeadContacts(id: string): Promise<LeadContact[]> {
+  await requireUser();
+  return db
+    .select()
+    .from(leadContacts)
+    .where(eq(leadContacts.leadId, id))
+    .orderBy(desc(leadContacts.contactedAt));
 }
 
 export async function convertLeadToClient(id: string): Promise<ActionResult> {
