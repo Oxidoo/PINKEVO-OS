@@ -229,7 +229,7 @@ export default async function PublicProposalPage({
                     <td className="px-3 py-2 font-semibold text-brand-700">{d.service}</td>
                     <td className="px-3 py-2">
                       <ul className="space-y-0.5">
-                        {d.items.map((it, j) => (
+                        {(d.items ?? []).map((it, j) => (
                           <li key={j}>• {it}</li>
                         ))}
                       </ul>
