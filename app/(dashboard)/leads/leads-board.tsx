@@ -45,12 +45,13 @@ function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
   let out = leads;
   if (filters.query) {
     const q = filters.query.toLowerCase().replace(/\s/g, "");
+    const qDigits = q.replace(/\D/g, "");
     out = out.filter(
       (l) =>
         leadName(l).toLowerCase().includes(q) ||
         l.company?.toLowerCase().includes(q) ||
         l.email?.toLowerCase().includes(q) ||
-        (l.phone ?? "").replace(/\s/g, "").includes(q),
+        (qDigits.length > 0 && (l.phone ?? "").replace(/\D/g, "").includes(qDigits)),
     );
   }
   if (filters.category !== "all") out = out.filter((l) => l.category === filters.category);
@@ -437,10 +438,10 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
         onContacted={() => {
           router.refresh();
           if (selectedLead) {
+            const updated = { ...selectedLead, status: "contacted" as Lead["status"] };
+            setSelectedLead(updated);
             setItems((prev) =>
-              prev.map((l) =>
-                l.id === selectedLead.id ? { ...l, status: "contacted" as Lead["status"] } : l,
-              ),
+              prev.map((l) => (l.id === selectedLead.id ? updated : l)),
             );
           }
         }}
