@@ -240,7 +240,7 @@ export function LeadSheet({
                   {lead.score}/100
                 </Badge>
               )}
-              {nextFollowup && (
+              {nextFollowup?.followupAt && (
                 <Badge className="gap-1 bg-amber-500 text-white hover:bg-amber-600">
                   <CalendarClock className="size-3" />
                   Rappel{" "}
