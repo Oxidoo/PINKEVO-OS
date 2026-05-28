@@ -331,7 +331,7 @@ export function TemplateForm({ initial }: { initial?: Initial }) {
                 </Button>
               </div>
               <div className="space-y-1">
-                {d.items.map((it, j) => (
+                {(d.items ?? []).map((it, j) => (
                   <div key={j} className="flex gap-2">
                     <Input
                       value={it}

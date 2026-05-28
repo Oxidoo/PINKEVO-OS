@@ -432,7 +432,7 @@ function ProposalDoc({ input }: { input: ProposalPdfInput }) {
                     {d.service}
                   </Text>
                   <View style={[s.delItems, { padding: 5 }]}>
-                    {d.items.map((it, i) => (
+                    {(d.items ?? []).map((it, i) => (
                       <Text key={i} style={{ fontSize: 9, marginBottom: 1 }}>
                         • {it}
                       </Text>
