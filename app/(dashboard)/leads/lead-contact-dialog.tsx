@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Phone, MessageSquare } from "lucide-react";
+import { CalendarClock, Mail, Phone, MessageSquare } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { contactLead } from "@/lib/crm/leads";
@@ -38,19 +39,25 @@ export function LeadContactDialog({
 }) {
   const [method, setMethod] = useState<Method>("call");
   const [note, setNote] = useState("");
+  const [followupAt, setFollowupAt] = useState("");
   const [pending, start] = useTransition();
 
   function handleClose() {
     setNote("");
     setMethod("call");
+    setFollowupAt("");
     onClose();
   }
 
   function handleSubmit() {
     start(async () => {
-      const r = await contactLead(leadId, method, note);
+      const r = await contactLead(leadId, method, note, followupAt || null);
       if (r.ok) {
-        toast.success("Contact enregistré — lead déplacé dans « Contacté »");
+        toast.success(
+          followupAt
+            ? "Contact enregistré + rappel planifié"
+            : "Contact enregistré — lead déplacé dans « Contacté »",
+        );
         handleClose();
         onDone();
       } else {
@@ -107,6 +114,24 @@ export function LeadContactDialog({
               rows={3}
               maxLength={1000}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="followup" className="flex items-center gap-1.5">
+              <CalendarClock className="size-4" />
+              Planifier un rappel{" "}
+              <span className="font-normal text-muted-foreground">(optionnel)</span>
+            </Label>
+            <Input
+              id="followup"
+              type="datetime-local"
+              value={followupAt}
+              onChange={(e) => setFollowupAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+            />
+            <p className="text-xs text-muted-foreground">
+              La note ci-dessus sera attachée au rappel.
+            </p>
           </div>
         </div>
 

@@ -9,9 +9,19 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Building2, CheckSquare, PhoneCall, Sparkles, Trash2, UserPlus } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import {
+  Building2,
+  CalendarClock,
+  CheckSquare,
+  PhoneCall,
+  Sparkles,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,10 +76,18 @@ function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
   return out;
 }
 
+export interface FollowupInfo {
+  leadId: string;
+  followupAt: Date | string;
+  note: string | null;
+  contactId: string;
+}
+
 function LeadCard({
   lead,
   selected,
   selectionMode,
+  followup,
   onOpen,
   onSelect,
   onDelete,
@@ -78,6 +96,7 @@ function LeadCard({
   lead: Lead;
   selected: boolean;
   selectionMode: boolean;
+  followup: FollowupInfo | undefined;
   onOpen: (lead: Lead) => void;
   onSelect: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
@@ -147,6 +166,12 @@ function LeadCard({
           )}
           {lead.score > 0 && (
             <p className="mt-1 text-xs text-muted-foreground">Score : {lead.score}/100</p>
+          )}
+          {followup && (
+            <div className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+              <CalendarClock className="size-3" />
+              Rappel {format(new Date(followup.followupAt), "d MMM 'à' HH:mm", { locale: fr })}
+            </div>
           )}
           {(lead.category || lead.sector || lead.zone) && (
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -235,6 +260,7 @@ function Column({
   leads,
   selected,
   selectionMode,
+  followupByLead,
   onOpen,
   onSelect,
   onDelete,
@@ -245,6 +271,7 @@ function Column({
   leads: Lead[];
   selected: Set<string>;
   selectionMode: boolean;
+  followupByLead: Map<string, FollowupInfo>;
   onOpen: (lead: Lead) => void;
   onSelect: (id: string, checked: boolean) => void;
   onDelete: (id: string) => void;
@@ -269,6 +296,7 @@ function Column({
             lead={l}
             selected={selected.has(l.id)}
             selectionMode={selectionMode}
+            followup={followupByLead.get(l.id)}
             onOpen={onOpen}
             onSelect={onSelect}
             onDelete={onDelete}
@@ -280,12 +308,29 @@ function Column({
   );
 }
 
-export function LeadsBoard({ leads }: { leads: Lead[] }) {
+export function LeadsBoard({
+  leads,
+  followups,
+}: {
+  leads: Lead[];
+  followups: FollowupInfo[];
+}) {
   const router = useRouter();
   const [items, setItems] = useState(leads);
   useEffect(() => {
     setItems(leads);
   }, [leads]);
+
+  const followupByLead = useMemo(() => {
+    const m = new Map<string, FollowupInfo>();
+    for (const f of followups) m.set(f.leadId, f);
+    return m;
+  }, [followups]);
+
+  const dueFollowups = useMemo(() => {
+    const sevenDays = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    return followups.filter((f) => new Date(f.followupAt).getTime() <= sevenDays);
+  }, [followups]);
   const [optimistic, setOptimistic] = useOptimistic(items);
   const [filters, setFilters] = useState<LeadFilters>(DEFAULT_FILTERS);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -379,6 +424,44 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
 
   return (
     <>
+      {dueFollowups.length > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-900">
+            <CalendarClock className="size-4" />
+            Rappels à venir ({dueFollowups.length})
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {dueFollowups.map((f) => {
+              const lead = items.find((l) => l.id === f.leadId);
+              if (!lead) return null;
+              const due = new Date(f.followupAt).getTime() <= Date.now();
+              return (
+                <button
+                  key={f.contactId}
+                  type="button"
+                  onClick={() => setSelectedLead(lead)}
+                  className="flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-white px-3 py-2 text-left text-sm hover:bg-amber-50"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{leadName(lead)}</p>
+                    {f.note && (
+                      <p className="truncate text-xs text-muted-foreground">{f.note}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`shrink-0 text-xs font-medium ${
+                      due ? "text-destructive" : "text-amber-700"
+                    }`}
+                  >
+                    {format(new Date(f.followupAt), "d MMM 'à' HH:mm", { locale: fr })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex-1">
           <LeadsFilterBar filters={filters} onChange={setFilters} />
@@ -422,6 +505,7 @@ export function LeadsBoard({ leads }: { leads: Lead[] }) {
               leads={filtered.filter((l) => l.status === col.id)}
               selected={selected}
               selectionMode={selectionMode}
+              followupByLead={followupByLead}
               onOpen={setSelectedLead}
               onSelect={handleSelect}
               onDelete={handleDelete}
