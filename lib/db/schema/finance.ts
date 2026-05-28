@@ -61,29 +61,49 @@ export const proposalTemplates = pgTable("proposal_templates", {
   slug: varchar("slug", { length: 96 }).notNull().unique(),
   name: text("name").notNull(),
   description: text("description"),
-  // Structure du devis : titre, contexte, objectifs[], livrables[], planning,
-  // conditions. Les valeurs sont des chaînes contenant des variables `{{client}}`,
-  // `{{date}}`, `{{prix_setup}}`, etc., substituées à la création du devis.
+  // Structure complète d'un devis professionnel. Les chaînes peuvent
+  // contenir des variables `{{client}}` `{{date}}` `{{prix_setup}}`
+  // substituées à la création du devis.
   sections: jsonb("sections")
     .$type<{
+      /** Titre principal du devis (ex: "Pack agence pour {{client}}") */
       title: string;
-      context: string;
-      objectives: string[];
-      deliverables: string[];
-      timeline: string;
-      conditions: string;
+      /** Sous-titre / catégorie de service (ex: "Référencement Web · Avis Clients") */
+      subtitle?: string;
+      /** Chapitre 1 — objet du devis (paragraphe descriptif long) */
+      objectDescription: string;
+      /** Lignes du tableau financier (chapitre 2). Le PDF additionne par groupe. */
+      lineItems: Array<{
+        label: string;
+        /** "1x", "/mois", "/an" */
+        frequency: string;
+        unitPrice: number;
+        /** "setup" = frais one-shot · "recurring" = abonnement mensuel */
+        group: "setup" | "recurring";
+      }>;
+      /** Chapitre 3 — livrables groupés par service avec fréquence */
+      deliverables: Array<{
+        service: string;
+        items: string[];
+        frequency: string;
+      }>;
+      /** Chapitre 4 — conditions de l'abonnement */
+      conditionsEngagement: string;
+      conditionsBilling: string;
+      conditionsPriceRevision: string;
+      conditionsClientObligations: string;
+      /** Sections additionnelles libres (ex: "5. Système d'avis", "6. PI") */
+      additionalSections?: Array<{ title: string; body: string }>;
     }>()
     .notNull(),
-  defaultSetup: numeric("default_setup", { precision: 12, scale: 2 }).notNull().default("0"),
-  defaultRecurring: numeric("default_recurring", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
   variables: text("variables").array().notNull().default([]),
   ...timestamps,
 });
 
 export const proposals = pgTable("proposals", {
   id: idCol(),
+  /** Numéro lisible auto-incrémenté par année : DEV-2026-001 */
+  number: varchar("number", { length: 32 }).unique(),
   clientId: uuid("client_id").references(() => clients.id, { onDelete: "set null" }),
   leadId: uuid("lead_id").references(() => leads.id, { onDelete: "set null" }),
   dealId: uuid("deal_id").references(() => deals.id, { onDelete: "set null" }),
@@ -146,10 +166,39 @@ export const apiUsage = pgTable("api_usage", {
   ...timestamps,
 });
 
+/**
+ * Infos prestataire affichées dans les devis/factures (singleton : une seule
+ * ligne dans la table, identifiée par slug='default').
+ */
+export const agencySettings = pgTable("agency_settings", {
+  id: idCol(),
+  slug: varchar("slug", { length: 32 }).notNull().unique().default("default"),
+  legalName: text("legal_name").notNull(),
+  tradingName: text("trading_name"),
+  legalStatus: text("legal_status"),
+  siret: varchar("siret", { length: 32 }),
+  apeCode: varchar("ape_code", { length: 16 }),
+  vatRegime: text("vat_regime"),
+  vatNumber: varchar("vat_number", { length: 32 }),
+  address: text("address"),
+  postalCode: varchar("postal_code", { length: 16 }),
+  city: text("city"),
+  country: text("country").default("France"),
+  email: text("email"),
+  phone: text("phone"),
+  website: text("website"),
+  iban: varchar("iban", { length: 64 }),
+  bic: varchar("bic", { length: 16 }),
+  jurisdiction: text("jurisdiction"),
+  brandColor: varchar("brand_color", { length: 16 }),
+  ...timestamps,
+});
+
 export type Subscription = typeof subscriptions.$inferSelect;
 export type Invoice = typeof invoices.$inferSelect;
 export type Proposal = typeof proposals.$inferSelect;
 export type ProposalTemplate = typeof proposalTemplates.$inferSelect;
+export type AgencySettings = typeof agencySettings.$inferSelect;
 export type Expense = typeof expenses.$inferSelect;
 export type ToolSubscription = typeof toolSubscriptions.$inferSelect;
 export type ApiUsage = typeof apiUsage.$inferSelect;

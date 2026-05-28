@@ -19,37 +19,53 @@ export interface StripePaymentLinkOption {
 }
 
 /**
- * Liste les Payment Links actifs du compte Stripe. Sert à proposer un
- * sélecteur dans le formulaire de devis (lien de paiement à inclure dans
- * le PDF/page publique).
+ * Liste les Payment Links actifs du compte Stripe avec les vrais noms
+ * de produits (product est explicitement expanded). Limite : 100 max.
  */
 export async function listPaymentLinks(): Promise<StripePaymentLinkOption[]> {
   if (!stripe) return [];
-  const out: StripePaymentLinkOption[] = [];
   const links = await stripe.paymentLinks.list({ active: true, limit: 100 });
+  const out: StripePaymentLinkOption[] = [];
   for (const link of links.data) {
-    const items = await stripe.paymentLinks.listLineItems(link.id, { limit: 1 });
-    const item = items.data[0];
-    const price = item?.price ?? null;
-    const productName =
-      typeof price?.product === "object" && price.product && "name" in price.product
-        ? String(price.product.name)
-        : (item?.description ?? "Produit");
-    out.push({
-      id: link.id,
-      url: link.url,
-      label: productName,
-      amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
-      currency: (price?.currency ?? "eur").toUpperCase(),
-      interval:
-        price?.recurring?.interval === "year"
-          ? "year"
-          : price?.recurring?.interval === "month"
-            ? "month"
-            : price?.type === "one_time"
-              ? "one_time"
-              : null,
-    });
+    try {
+      const items = await stripe.paymentLinks.listLineItems(link.id, {
+        limit: 5,
+        expand: ["data.price.product"],
+      });
+      const item = items.data[0];
+      const price = item?.price ?? null;
+      const product = price?.product;
+      const productName =
+        typeof product === "object" && product && "name" in product
+          ? String((product as Stripe.Product).name)
+          : item?.description || `Lien ${link.id.slice(-6)}`;
+      out.push({
+        id: link.id,
+        url: link.url,
+        label: productName,
+        amount: price?.unit_amount != null ? price.unit_amount / 100 : null,
+        currency: (price?.currency ?? "eur").toUpperCase(),
+        interval:
+          price?.recurring?.interval === "year"
+            ? "year"
+            : price?.recurring?.interval === "month"
+              ? "month"
+              : price?.type === "one_time"
+                ? "one_time"
+                : null,
+      });
+    } catch {
+      // Le lien existe mais on ne peut pas en lire les line items (rare).
+      // On l'expose quand même avec un label générique.
+      out.push({
+        id: link.id,
+        url: link.url,
+        label: `Lien ${link.id.slice(-6)}`,
+        amount: null,
+        currency: "EUR",
+        interval: null,
+      });
+    }
   }
   return out;
 }

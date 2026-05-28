@@ -1,24 +1,22 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getAgencySettings } from "@/lib/agency/settings";
-import { getUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { clients, leads, proposals } from "@/lib/db/schema";
-import { getSignedUrl, uploadToStorage } from "@/lib/documents/storage";
 import type { ProposalContent } from "@/lib/proposals/pdf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getUser();
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
-  const { id } = await params;
-  const [p] = await db.select().from(proposals).where(eq(proposals.id, id)).limit(1);
+/**
+ * Route PDF publique : accessible via le token unique du devis. Permet
+ * au client (sans compte) de télécharger une copie PDF avec sa signature.
+ */
+export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const [p] = await db.select().from(proposals).where(eq(proposals.signatureToken, token)).limit(1);
   if (!p) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  // Récupère le destinataire (client ou lead)
   let recipient = { name: "—" } as {
     name: string;
     company?: string | null;
@@ -28,15 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   };
   if (p.clientId) {
     const [c] = await db.select().from(clients).where(eq(clients.id, p.clientId)).limit(1);
-    if (c) {
-      recipient = {
-        name: c.name,
-        company: c.company,
-        address: null,
-        email: null,
-        phone: null,
-      };
-    }
+    if (c) recipient = { name: c.name, company: c.company };
   } else if (p.leadId) {
     const [l] = await db.select().from(leads).where(eq(leads.id, p.leadId)).limit(1);
     if (l) {
@@ -59,7 +49,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const { renderProposalPdf } = await import("@/lib/proposals/pdf");
   const pdf = await renderProposalPdf({
-    number: p.number ?? `DEV-${id.slice(0, 8)}`,
+    number: p.number ?? `DEV-${p.id.slice(0, 8)}`,
     content,
     totalSetup: Number(p.totalSetup),
     totalRecurring: Number(p.totalRecurring),
@@ -72,13 +62,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         ? { name: p.signatureName, signedAt: p.acceptedAt, ip: p.signedIp }
         : null,
   });
-
-  const path = `proposals/${p.id}.pdf`;
-  await uploadToStorage(path, pdf, "application/pdf");
-  const signed = await getSignedUrl(path, 86_400);
-  if (signed && signed !== p.pdfUrl) {
-    await db.update(proposals).set({ pdfUrl: signed }).where(eq(proposals.id, p.id));
-  }
 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {

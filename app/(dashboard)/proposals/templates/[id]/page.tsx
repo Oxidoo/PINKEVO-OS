@@ -35,9 +35,10 @@ export default async function EditProposalTemplatePage({
           slug: tpl.slug,
           name: tpl.name,
           description: tpl.description ?? "",
-          sections: tpl.sections,
-          defaultSetup: Number(tpl.defaultSetup),
-          defaultRecurring: Number(tpl.defaultRecurring),
+          sections: {
+            ...tpl.sections,
+            additionalSections: tpl.sections.additionalSections ?? [],
+          },
         }}
       />
     </div>
