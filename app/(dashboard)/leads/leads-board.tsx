@@ -179,7 +179,7 @@ function LeadCard({
                   onContact(lead);
                 }}
               >
-                <PhoneCall className="mr-1 size-3" /> Contacter
+                <PhoneCall className="mr-1 size-3" /> Contacté
               </Button>
               <Button
                 size="sm"

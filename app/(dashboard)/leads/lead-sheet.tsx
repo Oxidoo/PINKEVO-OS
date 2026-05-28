@@ -102,7 +102,7 @@ export function LeadSheet({
               onClick={() => setContactOpen(true)}
             >
               <PhoneCall className="mr-2 size-4" />
-              Contacter
+              Contacté
             </Button>
           </div>
 
