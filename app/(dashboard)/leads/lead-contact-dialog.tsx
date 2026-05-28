@@ -63,7 +63,7 @@ export function LeadContactDialog({
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Contacter · {leadName}</DialogTitle>
+          <DialogTitle>Enregistrer un contact · {leadName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

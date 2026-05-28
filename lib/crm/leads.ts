@@ -240,6 +240,19 @@ export async function getLeadContacts(id: string): Promise<LeadContact[]> {
     .orderBy(desc(leadContacts.contactedAt));
 }
 
+export async function updateLeadContactNote(
+  contactId: string,
+  note: string,
+): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  if (note.length > 1000) return { ok: false, error: "Note trop longue" };
+  await db
+    .update(leadContacts)
+    .set({ note: note.trim() || null })
+    .where(eq(leadContacts.id, contactId));
+  return { ok: true };
+}
+
 export async function convertLeadToClient(id: string): Promise<ActionResult> {
   const profile = await requireRole(["owner", "admin", "manager", "sales"]);
   const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);

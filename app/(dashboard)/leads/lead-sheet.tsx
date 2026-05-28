@@ -5,20 +5,25 @@ import { fr } from "date-fns/locale";
 import {
   Building2,
   Calendar,
+  Check,
   Globe,
   Mail,
   MapPin,
   MessageSquare,
+  Pencil,
   Phone,
   PhoneCall,
   Star,
+  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { getLeadContacts } from "@/lib/crm/leads";
+import { Textarea } from "@/components/ui/textarea";
+import { getLeadContacts, updateLeadContactNote } from "@/lib/crm/leads";
 import type { Lead, LeadContact } from "@/lib/db/schema";
 import { LeadContactDialog } from "./lead-contact-dialog";
 
@@ -38,6 +43,88 @@ const METHOD_LABEL: Record<string, string> = {
   email: "Email",
   sms: "SMS",
 };
+
+function ContactEntry({
+  entry,
+  onNoteUpdated,
+}: {
+  entry: LeadContact;
+  onNoteUpdated: (note: string | null) => void;
+}) {
+  const Icon = METHOD_ICON[entry.method] ?? Phone;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry.note ?? "");
+  const [pending, start] = useTransition();
+
+  function handleSave() {
+    start(async () => {
+      const r = await updateLeadContactNote(entry.id, draft);
+      if (r.ok) {
+        onNoteUpdated(draft.trim() || null);
+        setEditing(false);
+        toast.success("Note mise à jour");
+      } else {
+        toast.error(r.error);
+      }
+    });
+  }
+
+  function handleCancel() {
+    setDraft(entry.note ?? "");
+    setEditing(false);
+  }
+
+  return (
+    <div className="rounded-lg border bg-muted/20 px-3 py-2.5 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 font-medium">
+          <Icon className="size-3.5 text-muted-foreground" />
+          {METHOD_LABEL[entry.method] ?? entry.method}
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">
+            {format(new Date(entry.contactedAt), "d MMM yyyy 'à' HH:mm", { locale: fr })}
+          </span>
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => { setDraft(entry.note ?? ""); setEditing(true); }}
+              className="ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground"
+              title="Modifier la note"
+            >
+              <Pencil className="size-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <div className="mt-2 space-y-2">
+          <Textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            autoFocus
+            className="text-sm"
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSave} disabled={pending}>
+              <Check className="mr-1 size-3" />
+              {pending ? "Enregistrement…" : "Sauvegarder"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleCancel} disabled={pending}>
+              <X className="mr-1 size-3" />
+              Annuler
+            </Button>
+          </div>
+        </div>
+      ) : (
+        entry.note && <p className="mt-1 text-muted-foreground">{entry.note}</p>
+      )}
+    </div>
+  );
+}
 
 export function LeadSheet({
   lead,
@@ -193,30 +280,17 @@ export function LeadSheet({
                     Historique des contacts
                   </h3>
                   <div className="space-y-2">
-                    {history.map((entry) => {
-                      const Icon = METHOD_ICON[entry.method] ?? Phone;
-                      return (
-                        <div
-                          key={entry.id}
-                          className="rounded-lg border bg-muted/20 px-3 py-2.5 text-sm"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 font-medium">
-                              <Icon className="size-3.5 text-muted-foreground" />
-                              {METHOD_LABEL[entry.method] ?? entry.method}
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(entry.contactedAt), "d MMM yyyy 'à' HH:mm", {
-                                locale: fr,
-                              })}
-                            </span>
-                          </div>
-                          {entry.note && (
-                            <p className="mt-1 text-muted-foreground">{entry.note}</p>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {history.map((entry) => (
+                      <ContactEntry
+                        key={entry.id}
+                        entry={entry}
+                        onNoteUpdated={(note) =>
+                          setHistory((prev) =>
+                            prev.map((e) => (e.id === entry.id ? { ...e, note } : e)),
+                          )
+                        }
+                      />
+                    ))}
                   </div>
                 </section>
               </>
