@@ -65,39 +65,47 @@ export default async function ProposalTemplatesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {templates.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      href={`/proposals/templates/${t.id}`}
-                      className="hover:underline"
-                    >
-                      {t.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.slug}</code>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatCurrency(t.defaultSetup)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatCurrency(t.defaultRecurring)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {t.variables.slice(0, 5).map((v) => (
-                        <Badge key={v} variant="outline" className="text-[10px]">
-                          {v}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {format(t.updatedAt, "d MMM yyyy", { locale: fr })}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {templates.map((t) => {
+                const setup = t.sections.lineItems
+                  .filter((i) => i.group === "setup")
+                  .reduce((s, i) => s + Number(i.unitPrice), 0);
+                const recurring = t.sections.lineItems
+                  .filter((i) => i.group === "recurring")
+                  .reduce((s, i) => s + Number(i.unitPrice), 0);
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell className="font-medium">
+                      <Link
+                        href={`/proposals/templates/${t.id}`}
+                        className="hover:underline"
+                      >
+                        {t.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{t.slug}</code>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(setup)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatCurrency(recurring)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {t.variables.slice(0, 5).map((v) => (
+                          <Badge key={v} variant="outline" className="text-[10px]">
+                            {v}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {format(t.updatedAt, "d MMM yyyy", { locale: fr })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

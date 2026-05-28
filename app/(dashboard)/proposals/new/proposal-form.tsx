@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -13,16 +14,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatCurrency } from "@/lib/format";
 import type { StripePaymentLinkOption } from "@/lib/integrations/stripe/client";
 import { createProposalFromTemplate } from "@/lib/proposals/actions";
+
+interface LineItem {
+  label: string;
+  frequency: string;
+  unitPrice: number;
+  group: "setup" | "recurring";
+}
 
 interface TemplateOpt {
   id: string;
   name: string;
   slug: string;
   variables: string[];
-  defaultSetup: number;
-  defaultRecurring: number;
+  lineItems: LineItem[];
 }
 
 interface Props {
@@ -34,7 +42,6 @@ interface Props {
 }
 
 const NONE = "__none__";
-// Variables remplies automatiquement par le serveur, à ne pas demander à l'utilisateur.
 const AUTO_VARS = new Set(["client", "prenom", "societe", "date", "prix_setup", "prix_mensuel"]);
 
 export function ProposalForm({ templates, clients, leads, paymentLinks, stripeReady }: Props) {
@@ -46,27 +53,49 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
   const [paymentLinkId, setPaymentLinkId] = useState(NONE);
 
   const tpl = useMemo(() => templates.find((t) => t.id === templateId), [templates, templateId]);
-  const [setup, setSetup] = useState(tpl?.defaultSetup ?? 0);
-  const [recurring, setRecurring] = useState(tpl?.defaultRecurring ?? 0);
+  const [lineItems, setLineItems] = useState<LineItem[]>(tpl?.lineItems ?? []);
+
   const customVars = useMemo(
     () => (tpl?.variables ?? []).filter((v) => !AUTO_VARS.has(v)),
     [tpl?.variables],
   );
   const [vars, setVars] = useState<Record<string, string>>({});
 
+  const totalSetup = lineItems
+    .filter((i) => i.group === "setup")
+    .reduce((s, i) => s + Number(i.unitPrice || 0), 0);
+  const totalRecurring = lineItems
+    .filter((i) => i.group === "recurring")
+    .reduce((s, i) => s + Number(i.unitPrice || 0), 0);
+
   function pickTemplate(id: string) {
     setTemplateId(id);
     const next = templates.find((t) => t.id === id);
-    if (next) {
-      setSetup(next.defaultSetup);
-      setRecurring(next.defaultRecurring);
-    }
+    setLineItems(next?.lineItems ?? []);
     setVars({});
+  }
+
+  function updateItem(i: number, patch: Partial<LineItem>) {
+    setLineItems(lineItems.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  }
+  function removeItem(i: number) {
+    setLineItems(lineItems.filter((_, idx) => idx !== i));
+  }
+  function addItem(group: "setup" | "recurring") {
+    setLineItems([
+      ...lineItems,
+      { label: "", frequency: group === "setup" ? "1x" : "/mois", unitPrice: 0, group },
+    ]);
   }
 
   function onSubmit() {
     if (!templateId) {
       toast.error("Sélectionnez un template");
+      return;
+    }
+    const cleanItems = lineItems.filter((i) => i.label.trim());
+    if (cleanItems.length === 0) {
+      toast.error("Au moins une ligne tarifaire requise");
       return;
     }
     const link = paymentLinks.find((p) => p.id === paymentLinkId);
@@ -75,14 +104,13 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
         templateId,
         clientId: clientId === NONE ? "" : clientId,
         leadId: leadId === NONE ? "" : leadId,
-        totalSetup: setup,
-        totalRecurring: recurring,
+        lineItems: cleanItems,
         paymentLinkUrl: link?.url ?? "",
         paymentLinkLabel: link?.label ?? "",
         variables: vars,
       });
       if (r.ok) {
-        toast.success("Devis créé");
+        toast.success("Devis créé en brouillon");
         router.push("/proposals");
       } else {
         toast.error(r.error);
@@ -144,46 +172,66 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
             </Select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Le nom / société du destinataire alimente automatiquement les variables{" "}
-          <code>{"{{client}}"}</code> <code>{"{{prenom}}"}</code> <code>{"{{societe}}"}</code>.
-        </p>
       </section>
 
       <section className="space-y-3 rounded-xl border p-5">
-        <h2 className="text-sm font-semibold">Tarifs</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="setup">Setup (€)</Label>
-            <Input
-              id="setup"
-              type="number"
-              min={0}
-              step="0.01"
-              value={setup}
-              onChange={(e) => setSetup(Number(e.target.value))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="recurring">Récurrent / mois (€)</Label>
-            <Input
-              id="recurring"
-              type="number"
-              min={0}
-              step="0.01"
-              value={recurring}
-              onChange={(e) => setRecurring(Number(e.target.value))}
-            />
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Lignes tarifaires</h2>
+          <div className="text-xs text-muted-foreground">
+            Setup : <span className="font-semibold tabular-nums">{formatCurrency(totalSetup)}</span>
+            {" · "}Mensuel :{" "}
+            <span className="font-semibold tabular-nums">{formatCurrency(totalRecurring)}</span>
           </div>
         </div>
+        {(["setup", "recurring"] as const).map((group) => (
+          <div key={group} className="space-y-2 rounded-md bg-muted/30 p-3">
+            <p className="text-xs font-semibold text-brand-700">
+              {group === "setup" ? "FRAIS DE MISE EN SERVICE" : "ABONNEMENT MENSUEL"}
+            </p>
+            {lineItems
+              .map((it, i) => ({ it, i }))
+              .filter(({ it }) => it.group === group)
+              .map(({ it, i }) => (
+                <div key={i} className="grid grid-cols-[2fr_70px_80px_auto] gap-2">
+                  <Input
+                    value={it.label}
+                    onChange={(e) => updateItem(i, { label: e.target.value })}
+                    placeholder="Désignation"
+                  />
+                  <Input
+                    value={it.frequency}
+                    onChange={(e) => updateItem(i, { frequency: e.target.value })}
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={it.unitPrice}
+                    onChange={(e) => updateItem(i, { unitPrice: Number(e.target.value) })}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeItem(i)}
+                    aria-label="Supprimer"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            <Button type="button" variant="outline" size="sm" onClick={() => addItem(group)}>
+              <Plus className="mr-1 size-3" /> Ajouter une ligne
+            </Button>
+          </div>
+        ))}
       </section>
 
       <section className="space-y-3 rounded-xl border p-5">
-        <h2 className="text-sm font-semibold">Lien Stripe (optionnel)</h2>
+        <h2 className="text-sm font-semibold">Lien de paiement Stripe (optionnel)</h2>
         {!stripeReady ? (
           <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-            Stripe non configuré. Ajoute <code>STRIPE_SECRET_KEY</code> dans Vercel pour proposer
-            un lien de paiement dans le devis.
+            Stripe non configuré. Ajoute <code>STRIPE_SECRET_KEY</code> dans Vercel.
           </p>
         ) : paymentLinks.length === 0 ? (
           <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
@@ -194,7 +242,7 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
               rel="noreferrer"
               className="text-brand-600 hover:underline"
             >
-              Créer un Payment Link
+              En créer un
             </a>
             .
           </p>
@@ -204,7 +252,7 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>— Aucun lien de paiement —</SelectItem>
+              <SelectItem value={NONE}>— Aucun —</SelectItem>
               {paymentLinks.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <div className="flex flex-col">
@@ -220,14 +268,14 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
             </SelectContent>
           </Select>
         )}
+        <p className="text-xs text-muted-foreground">
+          Apparaît au client uniquement <strong>après signature</strong> du devis.
+        </p>
       </section>
 
       {customVars.length > 0 && (
         <section className="space-y-3 rounded-xl border p-5">
           <h2 className="text-sm font-semibold">Variables personnalisées</h2>
-          <p className="text-xs text-muted-foreground">
-            Le template utilise ces variables que tu dois remplir.
-          </p>
           {customVars.map((v) => (
             <div key={v} className="space-y-1.5">
               <Label htmlFor={`var-${v}`}>{`{{${v}}}`}</Label>
@@ -251,7 +299,7 @@ export function ProposalForm({ templates, clients, leads, paymentLinks, stripeRe
           Annuler
         </Button>
         <Button type="submit" disabled={pending}>
-          {pending ? "Création…" : "Créer le devis"}
+          {pending ? "Création…" : "Créer le brouillon"}
         </Button>
       </div>
     </form>

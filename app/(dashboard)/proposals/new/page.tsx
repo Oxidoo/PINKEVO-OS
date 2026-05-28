@@ -56,8 +56,7 @@ export default async function NewProposalPage() {
             name: t.name,
             slug: t.slug,
             variables: t.variables,
-            defaultSetup: Number(t.defaultSetup),
-            defaultRecurring: Number(t.defaultRecurring),
+            lineItems: t.sections.lineItems,
           }))}
           clients={clients.map((c) => ({ id: c.id, name: c.name }))}
           leads={leads.map((l) => ({ id: l.id, name: leadName(l) }))}

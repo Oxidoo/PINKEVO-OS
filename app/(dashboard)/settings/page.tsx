@@ -1,4 +1,7 @@
 import { isNull } from "drizzle-orm";
+import { Receipt } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { hasRole } from "@/lib/auth/rbac";
 import { getProfile, getUser } from "@/lib/auth/server";
@@ -23,11 +26,20 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Paramètres</h1>
-        <p className="text-sm text-muted-foreground">
-          Profil, équipe, intégrations. Bienvenue {profile.fullName ?? user.email}.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Paramètres</h1>
+          <p className="text-sm text-muted-foreground">
+            Profil, équipe, intégrations. Bienvenue {profile.fullName ?? user.email}.
+          </p>
+        </div>
+        {canManageTeam && (
+          <Button asChild variant="outline">
+            <Link href="/settings/billing">
+              <Receipt className="mr-1 size-4" /> Facturation & devis
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="profile" className="w-full">

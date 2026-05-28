@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/server";
 import { formatCurrency } from "@/lib/format";
-import { getProposals } from "@/lib/proposals/actions";
+import { getProposalsWithRecipient } from "@/lib/proposals/actions";
 import { getProposalTemplates } from "@/lib/proposals/templates";
 import { ProposalRowActions } from "./proposal-actions";
 
@@ -39,7 +39,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function ProposalsPage() {
   await requireUser();
-  const [items, templates] = await Promise.all([getProposals(), getProposalTemplates()]);
+  const [items, templates] = await Promise.all([
+    getProposalsWithRecipient(),
+    getProposalTemplates(),
+  ]);
   const canCreate = templates.length > 0;
 
   return (
@@ -88,10 +91,11 @@ export default async function ProposalsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Titre</TableHead>
+                <TableHead>N°</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead className="hidden md:table-cell">Titre</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Setup</TableHead>
-                <TableHead className="text-right">Récurrent</TableHead>
+                <TableHead className="text-right">Total</TableHead>
                 <TableHead className="hidden md:table-cell">Créé</TableHead>
                 <TableHead className="text-right" />
               </TableRow>
@@ -99,17 +103,20 @@ export default async function ProposalsPage() {
             <TableBody>
               {items.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.title}</TableCell>
+                  <TableCell className="font-mono text-xs font-medium">
+                    {p.number ?? "—"}
+                  </TableCell>
+                  <TableCell className="font-medium">{p.recipient}</TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {p.title}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[p.status] ?? "secondary"}>
                       {STATUS_LABEL[p.status] ?? p.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatCurrency(p.totalSetup)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatCurrency(p.totalRecurring)}
+                    {formatCurrency(Number(p.totalSetup) + Number(p.totalRecurring))}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {format(p.createdAt, "d MMM yyyy", { locale: fr })}
