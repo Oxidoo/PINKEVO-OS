@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, like, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
@@ -27,7 +27,7 @@ export async function getProposalsWithRecipient() {
       ? db
           .select({ id: clients.id, name: clients.name })
           .from(clients)
-          .where(sql`${clients.id} = any(${clientIds})`)
+          .where(inArray(clients.id, clientIds))
       : Promise.resolve([]),
     leadIds.length
       ? db
@@ -39,7 +39,7 @@ export async function getProposalsWithRecipient() {
             email: leads.email,
           })
           .from(leads)
-          .where(sql`${leads.id} = any(${leadIds})`)
+          .where(inArray(leads.id, leadIds))
       : Promise.resolve([]),
   ]);
   const clientMap = new Map(cls.map((c) => [c.id, c.name]));
