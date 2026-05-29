@@ -34,7 +34,7 @@ export function CommandPalette() {
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
-  // Cmd+K / Ctrl+K toggle
+  // Cmd+K / Ctrl+K toggle, plus a custom event fired by the header button.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -42,8 +42,15 @@ export function CommandPalette() {
         setOpen((v) => !v);
       }
     }
+    function onOpen() {
+      setOpen(true);
+    }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("open-command-palette", onOpen);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("open-command-palette", onOpen);
+    };
   }, []);
 
   const search = useCallback((q: string) => {
