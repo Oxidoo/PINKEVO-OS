@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LocaleToggle } from "@/components/shared/locale-toggle";
 import { MobileNav } from "@/components/shared/mobile-nav";
-import { SearchTrigger } from "@/components/shared/search-trigger";
 import { SidebarNav } from "@/components/shared/sidebar-nav";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
@@ -35,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </h1>
           </div>
           <div className="flex items-center gap-1">
-            <SearchTrigger />
+            <CommandPalette />
             <LocaleToggle />
             <ThemeToggle />
             <div className="mx-1 h-6 w-px bg-border" />
@@ -48,7 +47,6 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </div>
         </header>
         <main className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:gap-6 sm:p-6">{children}</main>
-        <CommandPalette />
       </div>
     </div>
   );
