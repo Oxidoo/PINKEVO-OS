@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LocaleToggle } from "@/components/shared/locale-toggle";
 import { MobileNav } from "@/components/shared/mobile-nav";
+import { SearchTrigger } from "@/components/shared/search-trigger";
 import { SidebarNav } from "@/components/shared/sidebar-nav";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { UserMenu } from "@/components/shared/user-menu";
@@ -34,17 +35,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </h1>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true }));
-              }}
-              className="hidden items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground sm:flex"
-              aria-label="Recherche globale (⌘K)"
-            >
-              <span>Recherche…</span>
-              <kbd className="rounded border bg-muted px-1 py-0.5 font-mono text-[10px]">⌘K</kbd>
-            </button>
+            <SearchTrigger />
             <LocaleToggle />
             <ThemeToggle />
             <div className="mx-1 h-6 w-px bg-border" />
