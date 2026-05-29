@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Search } from "lucide-react";
+import { MapPin, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -111,10 +111,20 @@ export function LeadsFilterBar({
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input
           placeholder="Nom, email, téléphone…"
-          className="pl-8"
+          className="pl-8 pr-8"
           value={filters.query}
           onChange={(e) => set("query", e.target.value)}
         />
+        {filters.query !== "" && (
+          <button
+            type="button"
+            onClick={() => set("query", "")}
+            aria-label="Effacer la recherche"
+            className="absolute right-2 top-2 rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="relative">
