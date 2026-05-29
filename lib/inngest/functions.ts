@@ -79,6 +79,24 @@ export const scheduledCampaigns = inngest.createFunction(
   },
 );
 
+/** Auto-enrich a lead via Pappers when it is first created. */
+export const leadAutoEnrich = inngest.createFunction(
+  { id: "lead-auto-enrich", triggers: [{ event: "pinkevo/lead.created" }] },
+  async ({ event }) => {
+    const { enrichLeadCore } = await import("@/lib/crm/enrich-core");
+    return enrichLeadCore(event.data.leadId as string);
+  },
+);
+
+/** Followup reminders — every 10 min, notifies via Telegram. */
+export const followupReminders = inngest.createFunction(
+  { id: "followup-reminders", triggers: [{ cron: "*/10 * * * *" }] },
+  async () => {
+    const { runFollowupReminders } = await import("@/lib/crm/followup-reminders");
+    return runFollowupReminders();
+  },
+);
+
 export const functions = [
   ping,
   agentRun,
@@ -89,4 +107,6 @@ export const functions = [
   automationDispatch,
   dailyReport,
   scheduledCampaigns,
+  leadAutoEnrich,
+  followupReminders,
 ];

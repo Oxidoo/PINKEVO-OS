@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./lib/i18n/request.ts");
@@ -49,4 +50,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["pino", "postgres", "@react-pdf/renderer"],
 };
 
-export default withNextIntl(nextConfig);
+const composed = withNextIntl(nextConfig);
+
+export default withSentryConfig(composed, {
+  // Only bundle Sentry when a DSN is configured; zero overhead otherwise.
+  silent: true,
+  disableLogger: true,
+  widenClientFileUpload: true,
+  sourcemaps: { disable: true },
+  // Telemetry off — we don't need Sentry's own analytics.
+  telemetry: false,
+});

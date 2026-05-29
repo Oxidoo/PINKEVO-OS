@@ -7,7 +7,6 @@ import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
 import { clients, leadContacts, leads } from "@/lib/db/schema";
 import type { LeadContact } from "@/lib/db/schema";
-import { searchCompany } from "@/lib/integrations/pappers/client";
 import type { ActionResult } from "./clients";
 import { leadInput, leadStatusValues } from "./validation";
 
@@ -27,6 +26,15 @@ export async function createLead(formData: FormData): Promise<ActionResult> {
     .insert(leads)
     .values({ ...rest, email: email || null, assignedTo: profile.id })
     .returning({ id: leads.id });
+
+  if (row?.id) {
+    // Auto-enrich in background via Inngest; dispatch automation event inline.
+    const { inngest } = await import("@/lib/inngest/client");
+    inngest.send({ name: "pinkevo/lead.created", data: { leadId: row.id } }).catch(() => {});
+    const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
+    dispatchAutomationEvent("pinkevo/lead.created", { leadId: row.id }).catch(() => {});
+  }
+
   revalidatePath("/leads");
   return { ok: true, id: row?.id };
 }
@@ -53,21 +61,16 @@ export async function updateLeadStatus(id: string, status: string): Promise<Acti
 
 export async function enrichLead(id: string): Promise<ActionResult> {
   await requireRole(["owner", "admin", "manager", "sales"]);
-  const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-  if (!lead) return { ok: false, error: "Lead introuvable" };
-  const query = lead.company ?? `${lead.firstName ?? ""} ${lead.lastName ?? ""}`.trim();
-  if (!query) return { ok: false, error: "Aucune entreprise à enrichir" };
-
-  const company = await searchCompany(query);
-  if (!company) return { ok: false, error: "Aucun résultat Pappers" };
-
-  await db
-    .update(leads)
-    .set({
-      status: lead.status === "new" ? "enriched" : lead.status,
-      enrichmentData: { ...(lead.enrichmentData ?? {}), pappers: company },
-    })
-    .where(eq(leads.id, id));
+  const { enrichLeadCore } = await import("./enrich-core");
+  const result = await enrichLeadCore(id);
+  if (!result.ok) {
+    const msgs: Record<string, string> = {
+      not_found: "Lead introuvable",
+      no_query: "Aucune entreprise à enrichir",
+      no_results: "Aucun résultat Pappers",
+    };
+    return { ok: false, error: msgs[result.reason ?? ""] ?? "Erreur d'enrichissement" };
+  }
   revalidatePath("/leads");
   return { ok: true };
 }
