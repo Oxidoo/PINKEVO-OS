@@ -12,6 +12,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
+  AlertTriangle,
   Building2,
   CalendarClock,
   CheckSquare,
@@ -173,6 +174,18 @@ function LeadCard({
               Rappel {format(new Date(followup.followupAt), "d MMM 'à' HH:mm", { locale: fr })}
             </div>
           )}
+          {!followup &&
+            lead.status === "contacted" &&
+            lead.lastContactedAt &&
+            Date.now() - new Date(lead.lastContactedAt).getTime() > 14 * 24 * 60 * 60 * 1000 && (
+              <div
+                title="Aucun contact depuis plus de 14 jours"
+                className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700"
+              >
+                <AlertTriangle className="size-3" />
+                Inactif {Math.floor((Date.now() - new Date(lead.lastContactedAt).getTime()) / (24 * 60 * 60 * 1000))}j
+              </div>
+            )}
           {(lead.category || lead.sector || lead.zone) && (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {lead.category && (

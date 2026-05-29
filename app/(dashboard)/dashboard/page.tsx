@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,10 +24,10 @@ export default async function DashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="MRR" value={data.kpis.mrr} currency />
-        <KpiCard label="Clients actifs" value={data.kpis.activeClients} />
-        <KpiCard label="Leads chauds" value={data.kpis.hotLeads} />
-        <KpiCard label="Marge du mois" value={data.kpis.monthMargin} currency />
+        <KpiCard label="MRR" value={data.kpis.mrr} currency href="/finance" />
+        <KpiCard label="Clients actifs" value={data.kpis.activeClients} href="/clients" />
+        <KpiCard label="Leads chauds" value={data.kpis.hotLeads} href="/leads" />
+        <KpiCard label="Marge du mois" value={data.kpis.monthMargin} currency href="/finance" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -51,14 +52,20 @@ export default async function DashboardPage() {
               <CardTitle className="text-base">À faire aujourd&apos;hui</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
+              <Link
+                href="/leads"
+                className="flex items-center justify-between rounded-md px-1 py-0.5 transition hover:bg-muted"
+              >
                 <span>Leads à relancer</span>
                 <Badge variant="secondary">{data.todo.leadsToFollow}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
+              </Link>
+              <Link
+                href="/proposals"
+                className="flex items-center justify-between rounded-md px-1 py-0.5 transition hover:bg-muted"
+              >
                 <span>Propales en attente</span>
                 <Badge variant="secondary">{data.todo.proposalsPending}</Badge>
-              </div>
+              </Link>
             </CardContent>
           </Card>
         </div>
