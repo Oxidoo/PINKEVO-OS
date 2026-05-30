@@ -69,6 +69,9 @@ export type LeadFilters = {
   category: string;
   sector: string;
   zone: string;
+  website: "all" | "with" | "without";
+  reviews: "all" | "with" | "without";
+  minRating: string; // "0" = toutes
   sort: "date" | "score" | "name";
 };
 
@@ -77,6 +80,9 @@ export const DEFAULT_FILTERS: LeadFilters = {
   category: "all",
   sector: "all",
   zone: "",
+  website: "all",
+  reviews: "all",
+  minRating: "0",
   sort: "date",
 };
 
@@ -103,7 +109,10 @@ export function LeadsFilterBar({
     filters.query !== "" ||
     filters.category !== "all" ||
     filters.sector !== "all" ||
-    filters.zone !== "";
+    filters.zone !== "" ||
+    filters.website !== "all" ||
+    filters.reviews !== "all" ||
+    filters.minRating !== "0";
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
@@ -162,6 +171,40 @@ export function LeadsFilterBar({
               {s}
             </SelectItem>
           ))}
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.website} onValueChange={(v) => set("website", v)}>
+        <SelectTrigger className="w-full sm:w-36">
+          <SelectValue placeholder="Site web" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Site web : tous</SelectItem>
+          <SelectItem value="with">Avec site web</SelectItem>
+          <SelectItem value="without">Sans site web</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.reviews} onValueChange={(v) => set("reviews", v)}>
+        <SelectTrigger className="w-full sm:w-40">
+          <SelectValue placeholder="Avis Google" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Avis Google : tous</SelectItem>
+          <SelectItem value="with">Avec avis Google</SelectItem>
+          <SelectItem value="without">Sans avis Google</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={filters.minRating} onValueChange={(v) => set("minRating", v)}>
+        <SelectTrigger className="w-full sm:w-36">
+          <SelectValue placeholder="Note" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="0">Toutes notes</SelectItem>
+          <SelectItem value="3">Note ≥ 3</SelectItem>
+          <SelectItem value="4">Note ≥ 4</SelectItem>
+          <SelectItem value="4.5">Note ≥ 4.5</SelectItem>
         </SelectContent>
       </Select>
 

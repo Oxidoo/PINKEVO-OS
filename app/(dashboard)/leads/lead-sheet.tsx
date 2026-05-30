@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getLeadContacts, updateLeadContactNote } from "@/lib/crm/leads";
 import type { Lead, LeadContact } from "@/lib/db/schema";
 import { LeadContactDialog } from "./lead-contact-dialog";
+import { LeadEditDialog } from "./lead-edit-dialog";
 
 function toDateTimeLocal(d: Date | string | null | undefined): string {
   if (!d) return "";
@@ -179,18 +180,23 @@ export function LeadSheet({
   open,
   onClose,
   onContacted,
+  onUpdated,
 }: {
   lead: Lead | null;
   open: boolean;
   onClose: () => void;
   onContacted: () => void;
+  onUpdated?: (updated: Lead) => void;
 }) {
   const [contactOpen, setContactOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [history, setHistory] = useState<LeadContact[]>([]);
 
   useEffect(() => {
     if (lead) {
-      getLeadContacts(lead.id).then(setHistory).catch(() => setHistory([]));
+      getLeadContacts(lead.id)
+        .then(setHistory)
+        .catch(() => setHistory([]));
     } else {
       setHistory([]);
     }
@@ -210,7 +216,9 @@ export function LeadSheet({
 
   function handleDone() {
     if (lead) {
-      getLeadContacts(lead.id).then(setHistory).catch(() => {});
+      getLeadContacts(lead.id)
+        .then(setHistory)
+        .catch(() => {});
     }
     onContacted();
   }
@@ -250,13 +258,14 @@ export function LeadSheet({
             </div>
           </SheetHeader>
 
-          <div className="mt-4">
-            <Button
-              className="w-full"
-              onClick={() => setContactOpen(true)}
-            >
+          <div className="mt-4 flex gap-2">
+            <Button className="flex-1" onClick={() => setContactOpen(true)}>
               <PhoneCall className="mr-2 size-4" />
               Contacté
+            </Button>
+            <Button variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 size-4" />
+              Modifier
             </Button>
           </div>
 
