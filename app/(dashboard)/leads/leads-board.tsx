@@ -71,6 +71,26 @@ function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
     const z = filters.zone.toLowerCase();
     out = out.filter((l) => l.zone?.toLowerCase().includes(z));
   }
+  if (filters.website !== "all") {
+    out = out.filter((l) => {
+      const hasSite = Boolean((l.enrichmentData as Record<string, unknown> | null)?.website);
+      return filters.website === "with" ? hasSite : !hasSite;
+    });
+  }
+  if (filters.reviews !== "all") {
+    out = out.filter((l) => {
+      const hasRating = Boolean((l.enrichmentData as Record<string, unknown> | null)?.rating);
+      return filters.reviews === "with" ? hasRating : !hasRating;
+    });
+  }
+  const min = Number.parseFloat(filters.minRating);
+  if (min > 0) {
+    out = out.filter((l) => {
+      const raw = (l.enrichmentData as Record<string, unknown> | null)?.rating;
+      const rating = typeof raw === "number" ? raw : Number.parseFloat(String(raw ?? ""));
+      return !Number.isNaN(rating) && rating >= min;
+    });
+  }
   if (filters.sort === "score") out = [...out].sort((a, b) => b.score - a.score);
   else if (filters.sort === "name")
     out = [...out].sort((a, b) => leadName(a).localeCompare(leadName(b), "fr"));
@@ -183,7 +203,11 @@ function LeadCard({
                 className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-700"
               >
                 <AlertTriangle className="size-3" />
-                Inactif {Math.floor((Date.now() - new Date(lead.lastContactedAt).getTime()) / (24 * 60 * 60 * 1000))}j
+                Inactif{" "}
+                {Math.floor(
+                  (Date.now() - new Date(lead.lastContactedAt).getTime()) / (24 * 60 * 60 * 1000),
+                )}
+                j
               </div>
             )}
           {(lead.category || lead.sector || lead.zone) && (
@@ -321,13 +345,7 @@ function Column({
   );
 }
 
-export function LeadsBoard({
-  leads,
-  followups,
-}: {
-  leads: Lead[];
-  followups: FollowupInfo[];
-}) {
+export function LeadsBoard({ leads, followups }: { leads: Lead[]; followups: FollowupInfo[] }) {
   const router = useRouter();
   const [items, setItems] = useState(leads);
   useEffect(() => {
@@ -457,9 +475,7 @@ export function LeadsBoard({
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{leadName(lead)}</p>
-                    {f.note && (
-                      <p className="truncate text-xs text-muted-foreground">{f.note}</p>
-                    )}
+                    {f.note && <p className="truncate text-xs text-muted-foreground">{f.note}</p>}
                   </div>
                   <span
                     className={`shrink-0 text-xs font-medium ${
@@ -537,10 +553,13 @@ export function LeadsBoard({
           if (selectedLead) {
             const updated = { ...selectedLead, status: "contacted" as Lead["status"] };
             setSelectedLead(updated);
-            setItems((prev) =>
-              prev.map((l) => (l.id === selectedLead.id ? updated : l)),
-            );
+            setItems((prev) => prev.map((l) => (l.id === selectedLead.id ? updated : l)));
           }
+        }}
+        onUpdated={(updated) => {
+          setSelectedLead(updated);
+          setItems((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+          router.refresh();
         }}
       />
 

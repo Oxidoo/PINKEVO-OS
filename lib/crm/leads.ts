@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireRole, requireUser } from "@/lib/auth/server";
 import { db } from "@/lib/db/client";
-import { clients, leadContacts, leads } from "@/lib/db/schema";
 import type { LeadContact } from "@/lib/db/schema";
+import { clients, leadContacts, leads } from "@/lib/db/schema";
 import type { ActionResult } from "./clients";
 import { leadInput, leadStatusValues } from "./validation";
 
@@ -28,7 +28,6 @@ export async function createLead(formData: FormData): Promise<ActionResult> {
     .returning({ id: leads.id });
 
   if (row?.id) {
-    // Auto-enrich in background via Inngest; dispatch automation event inline.
     const { inngest } = await import("@/lib/inngest/client");
     inngest.send({ name: "pinkevo/lead.created", data: { leadId: row.id } }).catch(() => {});
     const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
@@ -37,6 +36,21 @@ export async function createLead(formData: FormData): Promise<ActionResult> {
 
   revalidatePath("/leads");
   return { ok: true, id: row?.id };
+}
+
+export async function updateLead(id: string, formData: FormData): Promise<ActionResult> {
+  await requireRole(["owner", "admin", "manager", "sales"]);
+  const parsed = leadInput.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Données invalides" };
+  }
+  const { email, source: _source, status: _status, ...rest } = parsed.data;
+  await db
+    .update(leads)
+    .set({ ...rest, email: email || null })
+    .where(eq(leads.id, id));
+  revalidatePath("/leads");
+  return { ok: true };
 }
 
 const statusSchema = z.object({
@@ -118,6 +132,8 @@ const richCsvRowSchema = z.object({
   email: z.string().email().nullable().optional().or(z.literal("")),
   phone: z.string().nullable().optional(),
   company: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  sector: z.string().nullable().optional(),
   enrichmentData: z.record(z.string(), z.string()).optional(),
 });
 
@@ -151,6 +167,8 @@ export async function importLeadsFromCsv(
       email: r.data.email || null,
       phone: r.data.phone || null,
       company: r.data.company || null,
+      category: r.data.category || null,
+      sector: r.data.sector || null,
       enrichmentData:
         r.data.enrichmentData && Object.keys(r.data.enrichmentData).length > 0
           ? r.data.enrichmentData
@@ -182,15 +200,19 @@ export async function importLeadsFromCsv(
   if (deduped.length === 0)
     return { ok: false, error: `Tous les leads existent déjà (${skipped} doublons ignorés)` };
 
-  const toInsert = deduped.map((r) => ({
-    ...r,
-    category: defaults.category || null,
-    sector: defaults.sector || null,
-    zone: defaults.zone || null,
-    source: "csv" as const,
-    status: "new" as const,
-    assignedTo: profile.id,
-  }));
+  const toInsert = deduped.map((r) => {
+    // Per-row category wins (auto-detected client-side); else fall back to default.
+    const { category: rowCategory, sector: rowSector, ...rest } = r;
+    return {
+      ...rest,
+      category: rowCategory || defaults.category || null,
+      sector: rowSector || defaults.sector || null,
+      zone: defaults.zone || null,
+      source: "csv" as const,
+      status: "new" as const,
+      assignedTo: profile.id,
+    };
+  });
 
   const inserted = await db.insert(leads).values(toInsert).returning({ id: leads.id });
   const { dispatchAutomationEvent } = await import("@/lib/automations/dispatch");
@@ -284,8 +306,11 @@ export async function getUpcomingFollowups(): Promise<
     .from(leadContacts)
     .where(isNotNull(leadContacts.followupAt))
     .orderBy(leadContacts.followupAt);
-  // Garder le rappel futur le plus proche par lead
-  const byLead = new Map<string, { leadId: string; followupAt: Date; note: string | null; contactId: string }>();
+
+  const byLead = new Map<
+    string,
+    { leadId: string; followupAt: Date; note: string | null; contactId: string }
+  >();
   const now = Date.now();
   for (const r of rows) {
     if (!r.followupAt) continue;

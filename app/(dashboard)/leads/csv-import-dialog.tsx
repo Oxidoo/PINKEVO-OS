@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { guessCategory } from "@/lib/crm/category-map";
 import { importLeadsFromCsv } from "@/lib/crm/leads";
 import { CATEGORY_SECTORS, LEAD_CATEGORIES, LEAD_SECTORS } from "./leads-filters";
 
@@ -97,6 +98,8 @@ interface ParsedLead {
   lastName: string | null;
   email: string | null;
   phone: string | null;
+  category: string | null;
+  sector: string | null;
   enrichmentData: Record<string, string>;
 }
 
@@ -143,12 +146,18 @@ function parseRows(text: string): ParsedLead[] {
       if (instagram) enrichmentData.instagram = instagram;
       if (bingCategory) enrichmentData.bingCategory = bingCategory;
 
+      const company = iName >= 0 ? get(cells, iName) : null;
+      // Auto-detect category from the raw Bing/Google category, else company name.
+      const guessed = guessCategory(bingCategory) ?? guessCategory(company);
+
       return {
-        company: iName >= 0 ? get(cells, iName) : null,
+        company,
         firstName: iFirstName >= 0 ? get(cells, iFirstName) : null,
         lastName: iLastName >= 0 ? get(cells, iLastName) : null,
         email: firstEmail(iEmail >= 0 ? get(cells, iEmail) : null),
         phone: iPhone >= 0 ? get(cells, iPhone) : null,
+        category: guessed?.category ?? null,
+        sector: guessed?.sector ?? null,
         enrichmentData,
       };
     })
@@ -206,6 +215,7 @@ export function CsvImportDialog() {
   }
 
   const preview: ParsedLead[] = rows.slice(0, 5);
+  const autoCount = rows.filter((r) => r.category).length;
 
   return (
     <Dialog
@@ -257,7 +267,7 @@ export function CsvImportDialog() {
                     <TableRow>
                       <TableHead>Nom / Société</TableHead>
                       <TableHead>Téléphone</TableHead>
-                      <TableHead>Email</TableHead>
+                      <TableHead>Catégorie auto</TableHead>
                       <TableHead>Site web</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -269,8 +279,15 @@ export function CsvImportDialog() {
                         <TableRow key={i}>
                           <TableCell className="font-medium">{name}</TableCell>
                           <TableCell className="text-muted-foreground">{r.phone ?? "—"}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {r.email ?? "—"}
+                          <TableCell className="text-xs">
+                            {r.category ? (
+                              <span className="text-foreground">
+                                {r.category}
+                                {r.sector ? ` · ${r.sector}` : ""}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
                             {r.enrichmentData.website
@@ -289,9 +306,17 @@ export function CsvImportDialog() {
                 )}
               </div>
 
+              {autoCount > 0 && (
+                <p className="rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                  ✓ {autoCount}/{rows.length} leads catégorisés automatiquement. La catégorie par
+                  défaut ci-dessous s'applique uniquement aux {rows.length - autoCount} non
+                  reconnus.
+                </p>
+              )}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Catégorie (appliquée à tous)</Label>
+                  <Label>Catégorie par défaut (non reconnus)</Label>
                   <Select
                     value={category || "none"}
                     onValueChange={(v: string) => {
@@ -314,7 +339,7 @@ export function CsvImportDialog() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label>Secteur / Métier (appliqué à tous)</Label>
+                  <Label>Secteur par défaut (non reconnus)</Label>
                   <Select
                     value={sector || "none"}
                     onValueChange={(v: string) => setSector(v === "none" ? "" : v)}
