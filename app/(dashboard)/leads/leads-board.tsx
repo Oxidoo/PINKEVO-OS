@@ -77,18 +77,13 @@ function applyFilters(leads: Lead[], filters: LeadFilters): Lead[] {
       return filters.website === "with" ? hasSite : !hasSite;
     });
   }
-  if (filters.reviews !== "all") {
+  if (filters.mobilePhone !== "all") {
+    const MOBILE_PREFIXES = ["06", "073", "074", "075", "076", "077", "078", "079"];
     out = out.filter((l) => {
-      const hasRating = Boolean((l.enrichmentData as Record<string, unknown> | null)?.rating);
-      return filters.reviews === "with" ? hasRating : !hasRating;
-    });
-  }
-  const min = Number.parseFloat(filters.minRating);
-  if (min > 0) {
-    out = out.filter((l) => {
-      const raw = (l.enrichmentData as Record<string, unknown> | null)?.rating;
-      const rating = typeof raw === "number" ? raw : Number.parseFloat(String(raw ?? ""));
-      return !Number.isNaN(rating) && rating >= min;
+      if (!l.phone) return filters.mobilePhone === "no-mobile";
+      const digits = l.phone.replace(/\D/g, "");
+      const isMobile = MOBILE_PREFIXES.some((p) => digits.startsWith(p));
+      return filters.mobilePhone === "mobile" ? isMobile : !isMobile;
     });
   }
   if (filters.sort === "score") out = [...out].sort((a, b) => b.score - a.score);

@@ -70,8 +70,7 @@ export type LeadFilters = {
   sector: string;
   zone: string;
   website: "all" | "with" | "without";
-  reviews: "all" | "with" | "without";
-  minRating: string; // "0" = toutes
+  mobilePhone: "all" | "mobile" | "no-mobile";
   sort: "date" | "score" | "name";
 };
 
@@ -81,8 +80,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   sector: "all",
   zone: "",
   website: "all",
-  reviews: "all",
-  minRating: "0",
+  mobilePhone: "all",
   sort: "date",
 };
 
@@ -111,8 +109,7 @@ export function LeadsFilterBar({
     filters.sector !== "all" ||
     filters.zone !== "" ||
     filters.website !== "all" ||
-    filters.reviews !== "all" ||
-    filters.minRating !== "0";
+    filters.mobilePhone !== "all";
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
@@ -185,26 +182,14 @@ export function LeadsFilterBar({
         </SelectContent>
       </Select>
 
-      <Select value={filters.reviews} onValueChange={(v) => set("reviews", v)}>
-        <SelectTrigger className="w-full sm:w-40">
-          <SelectValue placeholder="Avis Google" />
+      <Select value={filters.mobilePhone} onValueChange={(v) => set("mobilePhone", v)}>
+        <SelectTrigger className="w-full sm:w-44">
+          <SelectValue placeholder="Tél. portable" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Avis Google : tous</SelectItem>
-          <SelectItem value="with">Avec avis Google</SelectItem>
-          <SelectItem value="without">Sans avis Google</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select value={filters.minRating} onValueChange={(v) => set("minRating", v)}>
-        <SelectTrigger className="w-full sm:w-36">
-          <SelectValue placeholder="Note" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="0">Toutes notes</SelectItem>
-          <SelectItem value="3">Note ≥ 3</SelectItem>
-          <SelectItem value="4">Note ≥ 4</SelectItem>
-          <SelectItem value="4.5">Note ≥ 4.5</SelectItem>
+          <SelectItem value="all">Tél. portable : tous</SelectItem>
+          <SelectItem value="mobile">Portable uniquement</SelectItem>
+          <SelectItem value="no-mobile">Sans portable</SelectItem>
         </SelectContent>
       </Select>
 
