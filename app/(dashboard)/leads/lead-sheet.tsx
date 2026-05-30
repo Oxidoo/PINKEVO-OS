@@ -424,6 +424,15 @@ export function LeadSheet({
           onDone={handleDone}
         />
       )}
+
+      {editOpen && (
+        <LeadEditDialog
+          lead={lead}
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => onUpdated?.(updated)}
+        />
+      )}
     </>
   );
 }
